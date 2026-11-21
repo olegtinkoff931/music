@@ -932,6 +932,47 @@ body:not(.playing) .fmesh i,#full:not(.open) .fmesh i{animation-play-state:pause
   .mcard.sy{width:100%;max-height:92vh;animation:sysheet .38s cubic-bezier(.2,.9,.3,1) both}
   .mcard .synccode{font-size:16px}
 }
+/* ===== аккаунт ===== */
+.acc{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--hover);text-align:left;min-width:0;transition:background .2s,transform .15s}
+.acc:hover{background:var(--hover2)}.acc:active{transform:scale(.97)}
+.av{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;background:linear-gradient(145deg,hsl(var(--h,0) 78% 62%),hsl(calc(var(--h,0) + 32) 70% 44%));box-shadow:0 3px 10px rgba(0,0,0,.25)}
+.av.guest{background:var(--hover2);color:var(--muted);box-shadow:none}
+.av svg{width:55%;height:55%}
+.av.big{width:64px;height:64px;font-size:28px}
+.acc .an{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.acc .an b,.mitem .two b{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acc .an small,.mitem .two small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mcard.am{width:min(420px,100%);overflow:auto}
+.atop{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.atop h3{margin:6px 0 0}
+.atop .psub{margin:0;font-size:13px}
+.astat{font-size:12px;color:var(--muted)}
+.aform{display:flex;flex-direction:column;gap:12px}
+.atabs{display:flex;padding:3px;border-radius:12px;background:var(--hover);gap:2px}
+.atabs button{flex:1;padding:8px;border-radius:9px;font-weight:600;color:var(--muted);transition:background .2s,color .2s}
+.atabs button.on{background:var(--hover2);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.aerr{font-size:13px;color:#ff5c6c;line-height:1.35}
+.aerr:empty{display:none}
+.alinks{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.alink{font-size:13px;color:var(--accent);font-weight:600}.alink:hover{text-decoration:underline}
+.afoot{font-size:12px;text-align:center}
+.achk{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);cursor:pointer}
+.mcard input[type=checkbox]{width:18px;height:18px;padding:0;accent-color:var(--accent);flex:none}
+.pill.full{width:100%;justify-content:center;padding:12px 16px}
+.pill:disabled{opacity:.6;pointer-events:none}
+.mitem.danger,.mitem.danger svg{color:#ff5c6c}
+.mitem .av{width:32px;height:32px;font-size:14px}
+.mitem .two{display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.25}
+@media(max-width:900px){.acc{justify-content:center;padding:6px;align-self:center}.acc .an{display:none}}
+@media(max-width:700px){.acc{display:none}}
+.accm{display:none}
+@media(max-width:700px){.atop .av.guest{display:none}}
+@media(max-width:700px){
+  .accm{display:block;flex:none;width:40px;height:40px;border-radius:50%;padding:0;transition:transform .15s}
+  .accm:active{transform:scale(.93)}
+  .accm .av{width:40px;height:40px;font-size:17px}
+  .accm .av.guest{background:var(--hover)}
+}
 </style>
 </head>
 <body>
@@ -988,6 +1029,8 @@ body:not(.playing) .fmesh i,#full:not(.open) .fmesh i{animation-play-state:pause
   <symbol id="i-wave" viewBox="0 0 24 24"><path d="M5 10v4M9 6v12M13 3.5v17M17 7.5v9M21 10.5v3"/></symbol>
   <symbol id="i-cover" viewBox="0 0 24 24"><path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/><rect x="8.5" y="8.5" width="7" height="7" rx="1.6"/></symbol>
   <symbol id="i-note" viewBox="0 0 24 24"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-5A4.5 4.5 0 0 0 5 19.5V21"/><circle cx="12" cy="7.5" r="3.5"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
 </svg>
 
 <div id="amb"><i></i><i></i></div>
@@ -995,6 +1038,7 @@ body:not(.playing) .fmesh i,#full:not(.open) .fmesh i{animation-play-state:pause
 <div id="app">
   <aside id="side">
     <div class="brand"><div class="logo"><svg class="s"><use href="#i-note"/></svg></div><span>Музыка</span></div>
+    <button class="acc" id="accBtn" title="Аккаунт"></button>
     <label class="search"><svg class="s"><use href="#i-search"/></svg><input id="q" type="search" placeholder="Поиск" autocomplete="off"></label>
     <div class="lbl">Медиатека</div>
     <nav id="nav">
@@ -1015,6 +1059,7 @@ body:not(.playing) .fmesh i,#full:not(.open) .fmesh i{animation-play-state:pause
     <div class="lbl" id="plLbl" style="display:none">Плейлисты</div>
     <nav id="plNav"></nav>
     <div class="sidefoot">
+      <button class="accm" id="accBtnM" title="Аккаунт"></button>
       <button class="addbtn" id="newPl" title="Новый плейлист"><svg class="s"><use href="#i-list"/></svg><span>Новый плейлист</span></button>
       <button class="addbtn" id="impPl" title="Выберите Library.xml / .m3u8 / .txt / .csv, экспортированные из Apple Music"><svg class="s"><use href="#i-dl"/></svg><span>Импорт плейлистов</span></button>
       <button class="addbtn" id="moreBtn" title="Ещё: копия, импорт, папка"><svg class="s"><use href="#i-more"/></svg><span>Ещё</span></button>
@@ -1098,6 +1143,7 @@ body:not(.playing) .fmesh i,#full:not(.open) .fmesh i{animation-play-state:pause
 </section>
 
 <input type="file" id="bkIn" accept=".json,application/json" hidden>
+<input type="file" id="accIn" accept=".json,application/json" hidden>
 <input type="file" id="plIn" accept=".xml,.m3u,.m3u8,.txt,.csv" multiple hidden>
 <aside id="fx"></aside>
 <div id="toast"></div>
@@ -4287,13 +4333,280 @@ const SYNC = (() => {
 $('#syncBtn').onclick = () => SYNC.open();
 $('#moreBtn').onclick = () => modal((c, close) => {
   c.append(h('h3', null, 'Ещё')); const box = h('div', 'mlist');
-  [['wifi', 'Подтянуть с Mac', () => SYNC.open()], ['up', 'Сохранить резервную копию', exportBackup], ['dl', 'Восстановить из копии', () => $('#bkIn').click()], ['list', 'Импорт плейлистов из Apple Music', () => $('#plIn').click()], ['folder', 'Добавить папку', () => $('#dirIn').click()], ['trash', 'Найти дубли', () => findDuplicates()]]
+  [['user', ACC.label(), () => ACC.open()], ['wifi', 'Подтянуть с Mac', () => SYNC.open()], ['up', 'Сохранить резервную копию', exportBackup], ['dl', 'Восстановить из копии', () => $('#bkIn').click()], ['list', 'Импорт плейлистов из Apple Music', () => $('#plIn').click()], ['folder', 'Добавить папку', () => $('#dirIn').click()], ['trash', 'Найти дубли', () => findDuplicates()]]
     .forEach(([ic, l, fn]) => { const b = h('button', 'mitem'); b.append(icon(ic, true), h('span', null, l)); b.onclick = () => { close(); fn(); }; box.append(b); });
   c.append(box); const st = $('#stat').textContent; if (st) c.append(h('div', 'psub', st));
 });
 $('#dupBtn').onclick = () => findDuplicates();
 $('#expBk').onclick = exportBackup; $('#impBk').onclick = () => $('#bkIn').click();
 $('#bkIn').onchange = e => { if (e.target.files[0]) importBackup(e.target.files[0]); e.target.value = ''; };
+
+// ===== аккаунт: вход и регистрация =====
+// Аккаунты хранятся на этом устройстве (без облака). У каждого свои плейлисты, любимое и история; файлы музыки общие.
+// PBKDF2-HMAC-SHA256 на чистом JS (не зависит от crypto.subtle, который в WKWebView на своих схемах может быть недоступен)
+const pbkdf2 = (() => {
+  const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const IV = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const W = new Int32Array(64);
+  const comp = (s, w) => {
+    for (let i = 0; i < 16; i++) W[i] = w[i];
+    for (let i = 16; i < 64; i++) {
+      const a = W[i - 15], b = W[i - 2];
+      W[i] = (W[i - 16] + (((a >>> 7) | (a << 25)) ^ ((a >>> 18) | (a << 14)) ^ (a >>> 3)) + W[i - 7] + (((b >>> 17) | (b << 15)) ^ ((b >>> 19) | (b << 13)) ^ (b >>> 10))) | 0;
+    }
+    let a = s[0], b = s[1], c = s[2], d = s[3], e = s[4], f = s[5], g = s[6], hh = s[7];
+    for (let i = 0; i < 64; i++) {
+      const t1 = (hh + (((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7))) + ((e & f) ^ (~e & g)) + K[i] + W[i]) | 0;
+      const t2 = ((((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10))) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      hh = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    return [(s[0] + a) | 0, (s[1] + b) | 0, (s[2] + c) | 0, (s[3] + d) | 0, (s[4] + e) | 0, (s[5] + f) | 0, (s[6] + g) | 0, (s[7] + hh) | 0];
+  };
+  const words = dv => { const w = []; for (let i = 0; i < 16; i++) w.push(dv.getInt32(i * 4)); return w; };
+  const sha = (bytes, st = IV, pre = 0) => {   // pre — сколько байт уже учтено в состоянии st
+    const n = bytes.length, len = ((n + 9 + 63) >> 6) << 6, buf = new Uint8Array(len); buf.set(bytes); buf[n] = 0x80;
+    const dv = new DataView(buf.buffer), bits = (pre + n) * 8;
+    dv.setUint32(len - 8, Math.floor(bits / 4294967296)); dv.setUint32(len - 4, bits >>> 0);
+    let s = st; for (let o = 0; o < len; o += 64) s = comp(s, words(new DataView(buf.buffer, o, 64)));
+    return s;
+  };
+  const toBytes = s => { const b = new Uint8Array(32), dv = new DataView(b.buffer); s.forEach((x, i) => dv.setInt32(i * 4, x)); return b; };
+  const TAIL = [0x80000000 | 0, 0, 0, 0, 0, 0, 0, 768];
+  return (pw, salt, iters) => {
+    const enc = new TextEncoder(); let key = enc.encode(pw); if (key.length > 64) key = toBytes(sha(key));
+    const blk = p => { const b = new Uint8Array(64).fill(p); key.forEach((x, i) => { b[i] ^= x; }); return comp(IV, words(new DataView(b.buffer))); };
+    const inS = blk(0x36), outS = blk(0x5c);
+    const sb = enc.encode(salt), m = new Uint8Array(sb.length + 4); m.set(sb); m[m.length - 1] = 1;
+    let u = comp(outS, [...sha(m, inS, 64), ...TAIL]); const t = u.slice();
+    for (let i = 1; i < iters; i++) { u = comp(outS, [...comp(inS, [...u, ...TAIL]), ...TAIL]); for (let j = 0; j < 8; j++) t[j] ^= u[j]; }
+    return t.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+  };
+})();
+const ACC = (() => {
+  const KEY = 'mpacc', DK = 'mpacc:d:', IT = 60000;
+  let st = { list: [], cur: null };   // cur — id аккаунта; null — гость (вход не выполнен)
+  try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && Array.isArray(s.list)) st = { list: s.list, cur: s.cur || null }; } catch (e) {}
+  if (st.cur && !st.list.some(a => a.id === st.cur)) st.cur = null;
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { toast('Не удалось сохранить аккаунт'); } };
+  const me = () => st.list.find(a => a.id === st.cur) || null;
+  const owner = () => st.cur || 'guest';
+  const putData = (id, d) => { try { localStorage.setItem(DK + id, JSON.stringify(d)); return true; } catch (e) { toast('Не хватило места, чтобы сохранить данные аккаунта', 3500); return false; } };
+  const getData = id => { try { return JSON.parse(localStorage.getItem(DK + id) || 'null'); } catch (e) { return null; } };
+  const snap = () => ({ ...backupData(), pend: { ...pend } });   // плейлисты, любимое, история, ожидающие треки
+  const hasData = () => playlists.length > 0 || tracks.some(t => t.fav || t.plays);
+  const rid = () => { const a = new Uint8Array(12); try { crypto.getRandomValues(a); } catch (e) { for (let i = 0; i < 12; i++) a[i] = Math.random() * 256; } return [...a].map(x => x.toString(16).padStart(2, '0')).join(''); };
+  const hashOf = (pw, salt, it) => new Promise(r => setTimeout(() => r(pbkdf2(pw, salt, it)), 30));
+  const same = (a, b) => { if (a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; };
+  const mail = s => String(s || '').trim().toLowerCase();
+  const okMail = s => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s);
+
+  // ---------- данные ----------
+  async function wipe() {   // очищает личные данные (плейлисты, любимое, историю); сами файлы музыки остаются
+    playlists.length = 0; savePl();
+    Object.keys(statDays).forEach(k => delete statDays[k]); saveDays();
+    Object.keys(pend).forEach(k => delete pend[k]); savePend();
+    for (const t of tracks) if (t.fav || t.plays || t.last || t.secs) { t.fav = false; t.plays = 0; t.last = 0; t.secs = 0; await saveMeta(t); }
+    try { localStorage.removeItem('mp2mix'); } catch (e) {}
+  }
+  async function loadFor(id) {
+    await wipe(); const d = getData(id);
+    if (d) { for (const [k, v] of Object.entries(d.pend || {})) if (k !== '__proto__') pend[k] = v; await applyBackupData(d, true); }
+    nav.view = 'songs'; nav.detail = null; render(true); paint();
+    if (typeof paintFavs === 'function') { try { paintFavs(); } catch (e) {} }
+    if (curId != null && byId(curId)) updateNow();
+  }
+  async function switchTo(id) {
+    const cur = owner(), to = id || 'guest'; if (cur === to) return;
+    if (!putData(cur, snap())) return;   // сначала сохраняем данные того, кто был до этого
+    st.cur = id || null; save(); await loadFor(to);
+  }
+  async function register(name, email, pw, adopt) {
+    const salt = rid(), hash = await hashOf(pw, salt, IT);
+    const a = { id: rid(), name, email, salt, hash, it: IT, created: Date.now(), hue: Math.floor(Math.random() * 360) };
+    if (!putData(owner(), snap())) return null;
+    st.list.push(a); st.cur = a.id; save();
+    if (adopt) putData(a.id, snap()); else { await wipe(); render(true); }
+    paint(); return a;
+  }
+  async function remove(id) {
+    if (st.cur === id) await switchTo(null);
+    st.list = st.list.filter(x => x.id !== id); save();
+    try { localStorage.removeItem(DK + id); } catch (e) {}
+    paint();
+  }
+
+  // ---------- вид ----------
+  const avatar = (a, big) => {
+    const e = h('div', 'av' + (big ? ' big' : ''));
+    if (a) { e.style.setProperty('--h', a.hue); e.textContent = (a.name.trim()[0] || '?').toUpperCase(); } else { e.classList.add('guest'); e.append(icon('user', true)); }
+    return e;
+  };
+  function paint() {
+    const a = me(), title = a ? 'Аккаунт: ' + a.name : 'Войти или создать аккаунт';
+    const b = $('#accBtn');
+    if (b) { b.innerHTML = ''; const an = h('div', 'an'); an.append(h('b', null, a ? a.name : 'Войти'), h('small', null, a ? a.email : 'Подключить аккаунт')); b.append(avatar(a), an); b.title = title; }
+    const m = $('#accBtnM');   // круглая кнопка в шапке на телефоне
+    if (m) { m.innerHTML = ''; m.append(avatar(a)); m.title = title; }
+  }
+  const field = (label, type, ph, ac, onEnter, val) => {
+    const w = h('label', 'fld'), i = h('input'); i.type = type; i.placeholder = ph || ''; i.autocomplete = ac || 'off'; i.value = val || ''; i.maxLength = 120;
+    i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') onEnter(); };
+    i.onfocus = () => setTimeout(() => { try { i.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (x) {} }, 350);   // поле не прячется под клавиатурой
+    w.append(label, i); return [w, i];
+  };
+  const btns = (c, close, label, go, danger) => {
+    const row = h('div', 'mbtns'), b1 = h('button', 'pill', 'Отмена'), b2 = h('button', 'pill accent', label);
+    if (danger) b2.style.background = '#e5334a'; b1.onclick = close; b2.onclick = go; row.append(b1, b2); c.append(row); return b2;
+  };
+
+  // вход / регистрация
+  function openAuth(mode = 'in', email0 = '') {
+    modal((c, close) => {
+      c.classList.add('am');
+      const draw = m => {
+        c.innerHTML = ''; let wait = false;
+        const top = h('div', 'atop'); top.append(avatar(null, true), h('h3', null, m === 'in' ? 'Вход в аккаунт' : 'Новый аккаунт'),
+          h('div', 'psub', m === 'in' ? 'Войдите, чтобы у вас были свои плейлисты, любимое и история прослушиваний.' : 'У каждого аккаунта свои плейлисты, любимое и история — они не смешиваются.'));
+        const tabs = h('div', 'atabs');
+        [['in', 'Войти'], ['up', 'Создать аккаунт']].forEach(([k, l]) => { const b = h('button', k === m ? 'on' : '', l); b.onclick = () => draw(k); tabs.append(b); });
+        const err = h('div', 'aerr'), fail = t => { err.textContent = t; };
+        let iN, iE, iP, iP2, adopt = null; const go = () => submit();
+        const form = h('div', 'aform');
+        if (m === 'up') { const [w, i] = field('Имя', 'text', 'Как вас зовут', 'name', go); iN = i; i.maxLength = 40; form.append(w); }
+        { const [w, i] = field('Email', 'email', 'name@example.com', 'username', go, email0); iE = i; form.append(w); }
+        { const [w, i] = field('Пароль', 'password', m === 'up' ? 'Минимум 6 символов' : 'Ваш пароль', m === 'up' ? 'new-password' : 'current-password', go); iP = i; form.append(w); }
+        if (m === 'up') {
+          { const [w, i] = field('Повторите пароль', 'password', 'Ещё раз', 'new-password', go); iP2 = i; form.append(w); }
+          if (owner() === 'guest' && hasData()) {
+            const l = h('label', 'achk'); adopt = h('input'); adopt.type = 'checkbox'; adopt.checked = true; l.append(adopt, h('span', null, 'Взять в аккаунт мои плейлисты и любимое из этой медиатеки')); form.append(l);
+          }
+        }
+        const label = m === 'in' ? 'Войти' : 'Создать аккаунт', main = h('button', 'pill accent full', label); main.onclick = go;
+        const setWait = on => { wait = on; main.disabled = on; main.textContent = on ? 'Подождите…' : label; };
+        async function submit() {
+          if (wait) return; fail('');
+          const e = mail(iE.value), pw = iP.value;
+          if (m === 'in') {
+            if (!okMail(e) || !pw) return fail('Введите email и пароль.');
+            const a = st.list.find(x => x.email === e);
+            if (!a) return fail(st.list.length ? 'Аккаунта с таким email нет на этом устройстве. Создайте его или войдите из файла аккаунта.' : 'На этом устройстве ещё нет аккаунтов. Создайте новый или войдите из файла аккаунта.');
+            setWait(true); const hh = await hashOf(pw, a.salt, a.it || IT); setWait(false);
+            if (!same(hh, a.hash)) { iP.select(); return fail('Неверный пароль.'); }
+            close(); await switchTo(a.id); toast('Здравствуйте, ' + a.name + '!');
+          } else {
+            const n = iN.value.trim();
+            if (!n) return fail('Введите имя.'); if (!okMail(e)) return fail('Проверьте адрес email.');
+            if (pw.length < 6) return fail('Пароль должен быть не короче 6 символов.'); if (pw !== iP2.value) return fail('Пароли не совпадают.');
+            if (st.list.some(x => x.email === e)) return fail('Аккаунт с таким email уже есть. Нажмите «Войти».');
+            setWait(true); const a = await register(n, e, pw, adopt ? adopt.checked : false); setWait(false);
+            if (!a) return fail('Не удалось создать аккаунт: не хватает места для данных.');
+            close(); toast('Аккаунт создан. Здравствуйте, ' + a.name + '!', 3000);
+          }
+        }
+        const links = h('div', 'alinks'), fl = h('button', 'alink', 'Войти из файла аккаунта'); fl.onclick = () => $('#accIn').click(); links.append(fl);
+        if (m === 'in') { const fg = h('button', 'alink', 'Забыли пароль?'); fg.onclick = () => forgot(iE.value); links.append(fg); }
+        c.append(top, tabs, form, err, main, links);
+        if (m === 'up') c.append(h('div', 'psub afoot', 'Аккаунт хранится только на этом устройстве, без облака: пароль нигде не сохраняется, остаётся лишь его защитный хэш. Чтобы пользоваться аккаунтом на другом устройстве, сохраните файл аккаунта.'));
+        setTimeout(() => (m === 'up' ? iN : (email0 ? iP : iE)).focus(), 40);
+      };
+      draw(mode);
+    });
+  }
+
+  function forgot(email) {
+    const a = st.list.find(x => x.email === mail(email));
+    modal((c, close) => {
+      c.append(h('h3', null, 'Забыли пароль?'),
+        h('div', 'psub', 'Пароль нигде не хранится, поэтому восстановить его нельзя: аккаунт живёт только на этом устройстве. Если у вас есть файл аккаунта или резервная копия, плейлисты и любимое можно будет вернуть.'));
+      if (!a) { c.append(h('div', 'psub', 'Чтобы сбросить аккаунт, сначала введите его email в форме входа.')); const b = h('div', 'mbtns'), ok = h('button', 'pill accent', 'Понятно'); ok.onclick = close; b.append(ok); c.append(b); return; }
+      c.append(h('div', 'psub', `Можно удалить аккаунт «${a.name}» (${a.email}) с этого устройства и создать заново. Его плейлисты, любимое и история на этом устройстве будут стёрты.`));
+      btns(c, close, 'Удалить аккаунт', async () => { close(); await remove(a.id); toast('Аккаунт удалён. Теперь можно создать новый'); openAuth('up', a.email); }, true);
+    });
+  }
+
+  // профиль
+  function openProfile() {
+    const a = me(); if (!a) return openAuth('in');
+    modal((c, close) => {
+      c.classList.add('am');
+      const top = h('div', 'atop'); top.append(avatar(a, true), h('h3', null, a.name), h('div', 'psub', a.email),
+        h('div', 'astat', `${pl(playlists.length, ['плейлист', 'плейлиста', 'плейлистов'])} · любимых: ${tracks.filter(t => t.fav).length}`));
+      const box = h('div', 'mlist');
+      [['edit', 'Изменить имя', () => askName('Ваше имя', v => { a.name = v.slice(0, 40); save(); paint(); toast('Имя обновлено'); }, a.name, 'Сохранить')],
+       ['sliders', 'Сменить пароль', () => changePw(a)],
+       ['user', 'Сменить аккаунт', () => openSwitch()],
+       ['up', 'Сохранить аккаунт в файл', () => exportAcc()],
+       ['logout', 'Выйти', async () => { await switchTo(null); toast('Вы вышли из аккаунта'); }],
+       ['trash', 'Удалить аккаунт', () => delAcc(a), 'danger']]
+        .forEach(([ic, l, fn, cls]) => { const b = h('button', 'mitem' + (cls ? ' ' + cls : '')); b.append(icon(ic, true), h('span', null, l)); b.onclick = () => { close(); fn(); }; box.append(b); });
+      c.append(top, box);
+    });
+  }
+  function openSwitch() {
+    modal((c, close) => {
+      c.append(h('h3', null, 'Аккаунты')); const box = h('div', 'mlist');
+      st.list.forEach(a => {
+        const b = h('button', 'mitem'), two = h('div', 'two'); two.append(h('b', null, a.name), h('small', null, a.email));
+        b.append(avatar(a), two); if (a.id === st.cur) b.append(icon('check', true));
+        b.onclick = () => { close(); if (a.id !== st.cur) openAuth('in', a.email); }; box.append(b);
+      });
+      const add = h('button', 'mitem'); add.append(icon('plus', true), h('span', null, 'Добавить аккаунт')); add.onclick = () => { close(); openAuth('up'); }; box.append(add);
+      c.append(box);
+    });
+  }
+  function changePw(a) {
+    modal((c, close) => {
+      c.append(h('h3', null, 'Сменить пароль'));
+      const go = async () => {
+        if (wait) return; err.textContent = '';
+        if (n1.value.length < 6) { err.textContent = 'Новый пароль — минимум 6 символов.'; return; }
+        if (n1.value !== n2.value) { err.textContent = 'Пароли не совпадают.'; return; }
+        wait = true; ok.disabled = true; const old = await hashOf(o.value, a.salt, a.it || IT);
+        if (!same(old, a.hash)) { wait = false; ok.disabled = false; err.textContent = 'Текущий пароль указан неверно.'; return; }
+        a.salt = rid(); a.it = IT; a.hash = await hashOf(n1.value, a.salt, IT); save(); close(); toast('Пароль изменён');
+      };
+      let wait = false; const [w0, o] = field('Текущий пароль', 'password', '', 'current-password', go), [w1, n1] = field('Новый пароль', 'password', 'Минимум 6 символов', 'new-password', go), [w2, n2] = field('Повторите новый пароль', 'password', '', 'new-password', go), err = h('div', 'aerr');
+      c.append(w0, w1, w2, err); const ok = btns(c, close, 'Сохранить', go); setTimeout(() => o.focus(), 40);
+    });
+  }
+  function delAcc(a) {
+    modal((c, close) => {
+      c.append(h('h3', null, 'Удалить аккаунт?'), h('div', 'psub', `Аккаунт «${a.name}» и его плейлисты, любимое и история будут стёрты с этого устройства. Файлы музыки останутся. Для подтверждения введите пароль.`));
+      let wait = false;
+      const go = async () => {
+        if (wait) return; err.textContent = ''; wait = true; ok.disabled = true; const hh = await hashOf(p.value, a.salt, a.it || IT);
+        if (!same(hh, a.hash)) { wait = false; ok.disabled = false; err.textContent = 'Неверный пароль.'; return; }
+        close(); await remove(a.id); toast('Аккаунт удалён');
+      };
+      const [w, p] = field('Пароль', 'password', '', 'current-password', go), err = h('div', 'aerr'); c.append(w, err);
+      const ok = btns(c, close, 'Удалить', go, true); setTimeout(() => p.focus(), 40);
+    });
+  }
+
+  // перенос на другое устройство
+  function exportAcc() {
+    const a = me(); if (!a) return;
+    saveFile('music-account-' + (a.name.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 30) || 'user') + '.json', JSON.stringify({ app: 'music-account', v: 1, acc: a, data: snap() }));
+    toast('Файл аккаунта сохранён. Откройте его на другом устройстве: «Войти → Войти из файла»', 5000);
+  }
+  const closeAll = () => { while (modalStack.length) modalStack[modalStack.length - 1](); };   // закрыть все открытые окна
+  async function importFile(file) {
+    try {
+      const d = JSON.parse(await readText(file)), a = d && d.acc;
+      if (!d || d.app !== 'music-account' || !a || !a.id || !a.email || !a.salt || !a.hash) throw 0;
+      const e = mail(a.email), ex = st.list.find(x => x.id === a.id || x.email === e);
+      if (ex) { toast('Этот аккаунт уже есть на устройстве. Введите пароль, чтобы войти', 4000); closeAll(); openAuth('in', ex.email); return; }
+      const acc = { id: String(a.id), name: String(a.name || e).slice(0, 40), email: e, salt: String(a.salt), hash: String(a.hash), it: +a.it || IT, created: +a.created || Date.now(), hue: +a.hue || 0 };
+      st.list.push(acc); save(); if (d.data) putData(acc.id, d.data);
+      toast('Аккаунт добавлен. Введите пароль, чтобы войти', 4000); closeAll(); openAuth('in', acc.email);
+    } catch (err) { toast('Это не файл аккаунта', 3500); }
+  }
+
+  paint();
+  return { open: () => (me() ? openProfile() : openAuth('in')), label: () => (me() ? me().name : 'Войти в аккаунт'), importFile, paint };
+})();
+$('#accBtn').onclick = () => ACC.open(); $('#accBtnM').onclick = () => ACC.open();
+$('#accIn').onchange = e => { if (e.target.files[0]) ACC.importFile(e.target.files[0]); e.target.value = ''; };
 
 // ===== умные подборки =====
 const SMART = {

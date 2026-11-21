@@ -2935,14 +2935,19 @@ let metaSeq = 0;
 async function setMediaMeta(t) {
   if (!t || !('mediaSession' in navigator)) return;
   const my = ++metaSeq;
-  let src = '';
-  try { src = await coverData(t); } catch (e) {}
+  let src = t._du || '';   // уже готовая обложка — ставим сразу, без await
+  if (!src) { try { src = await coverData(t); } catch (e) {} }
   if (!src && t.coverUrl && !/^blob:/.test(t.coverUrl)) src = t.coverUrl;
   if (!src) { try { src = new URL('icon-512.png', location.href).href; } catch (e) {} }
   if (my !== metaSeq) return;
   const type = src.startsWith('data:') ? src.slice(5, src.indexOf(';')) : undefined;
   try { navigator.mediaSession.metadata = new MediaMetadata({ title: t.title || '', artist: t.artist || '', album: t.album || '', artwork: src ? [{ src, sizes: '512x512', ...(type ? { type } : {}) }] : [] }); } catch (e) {}
 }
+// iOS игнорирует метаданные, поставленные до старта звука (после перезахода), и теряет их при сворачивании — переставляем в нужные моменты
+const refreshMeta = () => { const t = byId(curId); if (t) setMediaMeta(t); };
+document.addEventListener('playing', () => { refreshMeta(); setTimeout(refreshMeta, 400); setTimeout(refreshMeta, 1800); }, true);
+document.addEventListener('visibilitychange', () => { refreshMeta(); });
+addEventListener('pagehide', refreshMeta); addEventListener('pageshow', refreshMeta);
 let updSeq = 0, curSeenId = null;
 async function updateNow() {
   const t = byId(curId), my = ++updSeq; updExtra();

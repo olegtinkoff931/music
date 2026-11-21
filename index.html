@@ -1262,7 +1262,7 @@ function tx(stores, mode, fn) {
     t.oncomplete = () => res(r && r.result); t.onerror = t.onabort = () => rej(t.error);
   });
 }
-const saveMeta = t => { const { coverUrl, tint, pal, _du, ...rest } = t; return tx(['tracks'], 'readwrite', x => x.objectStore('tracks').put(rest)); };
+const saveMeta = t => { const { coverUrl, tint, pal, _du, _mk, _mu, ...rest } = t; return tx(['tracks'], 'readwrite', x => x.objectStore('tracks').put(rest)); };
 
 // ---------- очистка названий ----------
 const SITE_NAMES = 'sefon|zaycev|muzofond|mp3party|hotplayer|myzuka|muzmo|musify|prostopleer|vkmp3|mp3cc|zvooq|dydo|rusongs|mp3xl';
@@ -2932,34 +2932,39 @@ function flipText(el, dir) {
 // Обложка для экрана блокировки / Dynamic Island. iOS забирает её отдельным процессом и не умеет открывать blob:-ссылки (будет белый квадрат),
 // поэтому отдаём data:-URL (JPEG), а если обложки нет — иконку приложения.
 let metaSeq = 0;
+const metaCache = new Map();   // id → { key, du }: готовая обложка 512×512 (не пишется в базу)
 // Любая обложка (файл, iTunes/Deezer, свой выбор) → квадратный JPEG 512×512 в data:-URL с верным типом.
-// Картинки из интернета приходят без нормального MIME, и iOS показывает для них белый квадрат.
 async function artJpeg(t, src) {
   try {
+    const key = (t && t.cover) || src, c0 = metaCache.get(t.id);
+    if (c0 && c0.key === key) return c0.du;
     const b = (t && t.cover) || await (await fetch(src)).blob();
-    const key = (t && t.cover) || src;
-    if (t && t._mk === key && t._mu) return t._mu;
     const bmp = await createImageBitmap(b), S = 512, k = Math.max(S / bmp.width, S / bmp.height);
     const c = document.createElement('canvas'); c.width = c.height = S;
     const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, S, S);
     g.drawImage(bmp, (S - bmp.width * k) / 2, (S - bmp.height * k) / 2, bmp.width * k, bmp.height * k); if (bmp.close) bmp.close();
     const du = c.toDataURL('image/jpeg', .9);
-    if (t && du.length > 100) { t._mk = key; t._mu = du; }
-    return du.length > 100 ? du : '';
-  } catch (e) { return ''; }
+    if (du.length > 100) { metaCache.set(t.id, { key, du }); return du; }
+  } catch (e) {}
+  return '';
+}
+function putMeta(t, art) {
+  const type = art && art.startsWith('data:') ? art.slice(5, art.indexOf(';')) : undefined;
+  try { navigator.mediaSession.metadata = new MediaMetadata({ title: t.title || '', artist: t.artist || '', album: t.album || '', artwork: art ? [{ src: art, sizes: '512x512', ...(type ? { type } : {}) }] : [] }); } catch (e) {}
 }
 async function setMediaMeta(t) {
   if (!t || !('mediaSession' in navigator)) return;
   const my = ++metaSeq;
-  let src = '';
-  try { src = await coverData(t); } catch (e) {}
-  if (!src && t.coverUrl && !/^blob:/.test(t.coverUrl)) src = t.coverUrl;
-  let art = src ? await artJpeg(t, src) : '';
-  if (!art) art = src && !/^blob:/.test(src) ? src : '';
-  if (!art) { try { art = new URL('icon-512.png', location.href).href; } catch (e) {} }
-  if (my !== metaSeq) return;
-  const type = art.startsWith('data:') ? art.slice(5, art.indexOf(';')) : undefined;
-  try { navigator.mediaSession.metadata = new MediaMetadata({ title: t.title || '', artist: t.artist || '', album: t.album || '', artwork: art ? [{ src: art, sizes: '512x512', ...(type ? { type } : {}) }] : [] }); } catch (e) {}
+  let icon = ''; try { icon = new URL('icon-512.png', location.href).href; } catch (e) {}
+  // 1) сразу, без ожидания: чтобы iOS ни на миг не остался без «Сейчас играет»
+  const c0 = metaCache.get(t.id);
+  const quick = (c0 && c0.du) || t._du || (t.coverUrl && !/^blob:/.test(t.coverUrl) ? t.coverUrl : '') || icon;
+  putMeta(t, quick);
+  // 2) затем подменяем на нормализованную обложку
+  let src = ''; try { src = await coverData(t); } catch (e) {}
+  const art = src ? await artJpeg(t, src) : '';
+  if (my !== metaSeq || !art || art === quick) return;
+  putMeta(t, art);
 }
 let updSeq = 0, curSeenId = null;
 async function updateNow() {

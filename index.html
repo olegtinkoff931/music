@@ -2932,22 +2932,35 @@ function flipText(el, dir) {
 // Обложка для экрана блокировки / Dynamic Island. iOS забирает её отдельным процессом и не умеет открывать blob:-ссылки (будет белый квадрат),
 // поэтому отдаём data:-URL (JPEG), а если обложки нет — иконку приложения.
 let metaSeq = 0;
+// Любая обложка (файл, iTunes/Deezer, свой выбор) → квадратный JPEG 512×512 в data:-URL с верным типом.
+// Картинки из интернета приходят без нормального MIME, и iOS показывает для них белый квадрат.
+async function artJpeg(t, src) {
+  try {
+    const b = (t && t.cover) || await (await fetch(src)).blob();
+    const key = (t && t.cover) || src;
+    if (t && t._mk === key && t._mu) return t._mu;
+    const bmp = await createImageBitmap(b), S = 512, k = Math.max(S / bmp.width, S / bmp.height);
+    const c = document.createElement('canvas'); c.width = c.height = S;
+    const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, S, S);
+    g.drawImage(bmp, (S - bmp.width * k) / 2, (S - bmp.height * k) / 2, bmp.width * k, bmp.height * k); if (bmp.close) bmp.close();
+    const du = c.toDataURL('image/jpeg', .9);
+    if (t && du.length > 100) { t._mk = key; t._mu = du; }
+    return du.length > 100 ? du : '';
+  } catch (e) { return ''; }
+}
 async function setMediaMeta(t) {
   if (!t || !('mediaSession' in navigator)) return;
   const my = ++metaSeq;
-  let src = t._du || '';   // уже готовая обложка — ставим сразу, без await
-  if (!src) { try { src = await coverData(t); } catch (e) {} }
+  let src = '';
+  try { src = await coverData(t); } catch (e) {}
   if (!src && t.coverUrl && !/^blob:/.test(t.coverUrl)) src = t.coverUrl;
-  if (!src) { try { src = new URL('icon-512.png', location.href).href; } catch (e) {} }
+  let art = src ? await artJpeg(t, src) : '';
+  if (!art) art = src && !/^blob:/.test(src) ? src : '';
+  if (!art) { try { art = new URL('icon-512.png', location.href).href; } catch (e) {} }
   if (my !== metaSeq) return;
-  const type = src.startsWith('data:') ? src.slice(5, src.indexOf(';')) : undefined;
-  try { navigator.mediaSession.metadata = new MediaMetadata({ title: t.title || '', artist: t.artist || '', album: t.album || '', artwork: src ? [{ src, sizes: '512x512', ...(type ? { type } : {}) }] : [] }); } catch (e) {}
+  const type = art.startsWith('data:') ? art.slice(5, art.indexOf(';')) : undefined;
+  try { navigator.mediaSession.metadata = new MediaMetadata({ title: t.title || '', artist: t.artist || '', album: t.album || '', artwork: art ? [{ src: art, sizes: '512x512', ...(type ? { type } : {}) }] : [] }); } catch (e) {}
 }
-// iOS игнорирует метаданные, поставленные до старта звука (после перезахода), и теряет их при сворачивании — переставляем в нужные моменты
-const refreshMeta = () => { const t = byId(curId); if (t) setMediaMeta(t); };
-document.addEventListener('playing', () => { refreshMeta(); setTimeout(refreshMeta, 400); setTimeout(refreshMeta, 1800); }, true);
-document.addEventListener('visibilitychange', () => { refreshMeta(); });
-addEventListener('pagehide', refreshMeta); addEventListener('pageshow', refreshMeta);
 let updSeq = 0, curSeenId = null;
 async function updateNow() {
   const t = byId(curId), my = ++updSeq; updExtra();

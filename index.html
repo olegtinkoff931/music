@@ -1984,8 +1984,7 @@ function catRow(t, ids) {
   r.replaceChild(b, k[3]); k[6].remove(); return r;
 }
 const CAT_GENRES = [['Популярное', ''], ['Электроника', 'electronic'], ['Хип-хоп', 'hip hop'], ['Лоу-фай', 'lofi'], ['Рок', 'rock'], ['Поп', 'pop'], ['Хаус', 'house'], ['Инди', 'indie'], ['Джаз', 'jazz'], ['Эмбиент', 'ambient'], ['R&B', 'r&b'], ['Классика', 'classical'], ['Фонк', 'phonk'], ['Регги', 'reggae']];
-let catView = 'grid', catChipX = 0;
-try { catView = localStorage.getItem('mpcatview') === 'list' ? 'list' : 'grid'; } catch (e) {}
+let catChipX = 0;   // на телефоне каталог — только список
 function bindTilt(c, tilt, cc) {
   if (!matchMedia('(hover:hover)').matches || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
   const MAX = 9; let raf = 0, ev = null;
@@ -2077,13 +2076,9 @@ function catMsg(ic, title, text, retry) {
   return m;
 }
 function catToolbar(n, q) {
-  const bar = h('div', 'ctool'), l = h('div'); l.append(h('h2', null, q ? 'Все результаты' : 'Топ недели'), h('div', 'psub', pl(n, ['трек', 'трека', 'треков'])));
-  const seg = h('div', 'seg');
-  [['grid', 'cgrid', 'Плитка'], ['list', 'clist', 'Список']].forEach(([v, ic, tt]) => {
-    const b = h('button', v === catView ? 'on' : ''); b.title = tt; b.append(icon(ic, true));
-    b.onclick = () => { if (catView === v) return; catView = v; try { localStorage.setItem('mpcatview', v); } catch (e) {} drawCat(true); }; seg.append(b);
-  });
-  bar.append(l, h('div', 'grow'), seg); return bar;
+  const bar = h('div', 'ctool'), l = h('div');
+  l.append(h('h2', null, q ? 'Все результаты' : 'Топ недели'), h('div', 'psub', pl(n, ['трек', 'трека', 'треков'])));
+  bar.append(l); return bar;
 }
 function drawCat(still) {
   if (!catBox || !catBox.isConnected) return; catBox.innerHTML = ''; catBox.classList.toggle('still', !!still);
@@ -2096,8 +2091,7 @@ function drawCat(still) {
   if (!q) { const a = catArtists(items); if (a) catBox.append(a); }
   catBox.append(catToolbar(items.length, q));
   if (!rest.length) return;
-  if (catView === 'list') { const box = h('div', 'list'); rest.forEach(t => box.append(catRow(t, ids))); catBox.append(box); }
-  else { const g = h('div', 'cgrid'); rest.forEach((t, k) => g.append(catCard(t, ids, k, q ? 0 : k + 2 <= 10 ? k + 2 : 0))); catBox.append(g); }
+  const box = h('div', 'list'); rest.forEach(t => box.append(catRow(t, ids))); catBox.append(box);
 }
 function renderCatalog(c, main, anim, st) {
   const q = $('#q').value.trim(), key = q || '#trend';

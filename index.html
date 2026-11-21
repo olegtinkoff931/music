@@ -3870,11 +3870,15 @@ function saveFile(name, text) {
   if (IOS && navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f] }).catch(() => {}); return; }
   const a = h('a'); a.href = URL.createObjectURL(f); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
-function exportBackup() {
+function backupData() {
   const fav = tracks.filter(t => t.fav).map(t => ({ t: t.title, a: t.artist || '' }));
   const hist = tracks.filter(t => t.plays || t.last).map(t => ({ t: t.title, a: t.artist || '', plays: t.plays || 0, last: t.last || 0, secs: Math.round(t.secs || 0) }));
-  saveFile('music-backup-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify({ app: 'music', v: 1, at: Date.now(), playlists, fav, hist, days: statDays }));
-  toast(`Копия: плейлистов ${playlists.length}, любимых ${fav.length}, в истории ${hist.length}`, 3500);
+  return { app: 'music', v: 1, at: Date.now(), playlists, fav, hist, days: statDays };
+}
+function exportBackup() {
+  const d = backupData();
+  saveFile('music-backup-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(d));
+  toast(`Копия: плейлистов ${d.playlists.length}, любимых ${d.fav.length}, в истории ${d.hist.length}`, 3500);
 }
 let pend = {}; try { pend = JSON.parse(localStorage.getItem('mp2pend') || '{}'); } catch (e) {}
 const savePend = () => { try { localStorage.setItem('mp2pend', JSON.stringify(pend)); } catch (e) {} };
@@ -3888,21 +3892,26 @@ async function applyPend() {   // применяет любимое и исто�
   if (n) { savePend(); render(false); } return n;
 }
 const _importFiles = importFiles; importFiles = async (...a) => { const r = await _importFiles(...a); await applyPend(); return r; };
+// Применяет данные копии: плейлисты, любимое, историю. mirror — режим переноса с Mac: плейлисты с тем же id обновляются целиком (имя, обложка)
+async function applyBackupData(d, mirror) {
+  const same = (x, i) => (i.aud && x.aud === i.aud) || (norm(x.t) === norm(i.t) && norm(x.a) === norm(i.a));
+  for (const p of d.playlists || []) {
+    const items = (p.items || []).map(i => i.aud ? i : { ...i, id: undefined }), ex = playlists.find(x => x.id === p.id);
+    if (ex) { items.forEach(i => { if (!ex.items.some(x => same(x, i))) ex.items.push(i); }); if (mirror) Object.assign(ex, { ...p, items: ex.items }); }
+    else playlists.push({ ...p, items });
+  }
+  savePl();
+  (d.fav || []).forEach(f => { const k = keyOf({ title: f.t, artist: f.a }); pend[k] = { ...pend[k], fav: true }; });
+  (d.hist || []).forEach(x => { const k = keyOf({ title: x.t, artist: x.a }); const o = pend[k] || {}; pend[k] = { ...o, plays: Math.max(o.plays || 0, x.plays || 0), last: Math.max(o.last || 0, x.last || 0), secs: Math.max(o.secs || 0, x.secs || 0) }; });
+  for (const [k, v] of Object.entries(d.days || {})) statDays[k] = Math.max(statDays[k] || 0, v); saveDays();
+  savePend(); const n = await applyPend(); render(false);
+  return { n, left: Object.keys(pend).length, pls: (d.playlists || []).length };
+}
 async function importBackup(file) {
   try {
     const d = JSON.parse(await readText(file)); if (d.app !== 'music') throw 0;
-    const same = (x, i) => (i.aud && x.aud === i.aud) || (norm(x.t) === norm(i.t) && norm(x.a) === norm(i.a));
-    for (const p of d.playlists || []) {
-      const items = (p.items || []).map(i => i.aud ? i : { ...i, id: undefined }), ex = playlists.find(x => x.id === p.id);
-      if (ex) items.forEach(i => { if (!ex.items.some(x => same(x, i))) ex.items.push(i); }); else playlists.push({ ...p, items });
-    }
-    savePl();
-    (d.fav || []).forEach(f => { const k = keyOf({ title: f.t, artist: f.a }); pend[k] = { ...pend[k], fav: true }; });
-    (d.hist || []).forEach(x => { const k = keyOf({ title: x.t, artist: x.a }); const o = pend[k] || {}; pend[k] = { ...o, plays: Math.max(o.plays || 0, x.plays || 0), last: Math.max(o.last || 0, x.last || 0), secs: Math.max(o.secs || 0, x.secs || 0) }; });
-    for (const [k, v] of Object.entries(d.days || {})) statDays[k] = Math.max(statDays[k] || 0, v); saveDays();
-    savePend(); const n = await applyPend(); render(false);
-    const left = Object.keys(pend).length;
-    toast(`Восстановлено: плейлистов ${(d.playlists || []).length}, треков обновлено ${n}` + (left ? `. Для ${left} треков нет файлов, применю после их добавления` : ''), 6000);
+    const r = await applyBackupData(d, false);
+    toast(`Восстановлено: плейлистов ${r.pls}, треков обновлено ${r.n}` + (r.left ? `. Для ${r.left} треков нет файлов, применю после их добавления` : ''), 6000);
   } catch (e) { toast('Это не файл резервной копии плеера', 3500); }
 }
 // ---------- перенос музыки по Wi‑Fi (Mac раздаёт, iPhone подтягивает) ----------
@@ -3931,14 +3940,40 @@ const SYNC = (() => {
   const keyOf = t => t.name + '|' + t.size;
 
   // ===== Mac: раздаёт файлы =====
+  // Кроме самих треков передаётся всё остальное: названия, исполнители, альбомы, жанры, обложки, видео-обложки,
+  // плейлисты, любимое и история. Обложки и видео запрашиваются отдельными файлами: 'c:<id трека>' и 'v:<ключ видео>'.
+  const fnv = u => { let x = 2166136261; for (let i = 0; i < u.length; i++) { x ^= u[i]; x = Math.imul(x, 16777619) >>> 0; } return x; };
+  const fnvS = s => fnv(new TextEncoder().encode(s)).toString(36);
+  const chCache = new WeakMap();
+  async function coverHash(t) {
+    if (!t.cover) return '';
+    if (chCache.has(t.cover)) return chCache.get(t.cover);
+    const u = new Uint8Array(await t.cover.arrayBuffer()), r = fnv(u).toString(36) + '.' + u.length.toString(36);
+    chCache.set(t.cover, r); return r;
+  }
+  async function describe(t) {
+    const o = { id: t.id, name: t.name, size: t.size, duration: t.duration || 0, title: t.title || '', artist: t.artist || '', album: t.album || '',
+      genre: t.genre, gn: t.gn, raw: t.raw || null, ed: !!t.ed, added: t.added || 0, cs: t.cover ? t.cover.size : 0, ch: await coverHash(t), vid: t.vid || '' };
+    o.sig = fnvS([o.title, o.artist, o.album, JSON.stringify(o.genre === undefined ? '' : o.genre), o.ed ? 1 : 0, o.ch, o.vid].join('\u0001'));
+    return o;
+  }
   function serve(dc, onState) {
-    dc.binaryType = 'arraybuffer'; let token = 0, sent = 0, bytes = 0;
+    dc.binaryType = 'arraybuffer'; let token = 0, sent = 0, bytes = 0, sid = 0, listing = false;
     dc.bufferedAmountLowThreshold = 256 * 1024;
     const drain = () => dc.bufferedAmount < MAXBUF ? Promise.resolve() : new Promise(r => { const f = () => { dc.removeEventListener('bufferedamountlow', f); r(); }; dc.addEventListener('bufferedamountlow', f); });
-    const info = id => { const t = tracks.find(x => x.id === id); return t ? { title: t.title || t.name, artist: t.artist || '', album: t.album || '', cover: t.coverUrl || '' } : {}; };
+    const isCov = id => typeof id === 'string' && id.startsWith('c:'), isVid = id => typeof id === 'string' && id.startsWith('v:');
+    const info = id => {
+      const t = isVid(id) ? null : tracks.find(x => x.id === (isCov(id) ? +id.slice(2) : id));
+      if (!t) return { title: isVid(id) ? 'Видео-обложка' : '', artist: '', cover: '' };
+      return { title: (isCov(id) ? 'Обложка · ' : '') + (t.title || t.name), artist: t.artist || '', cover: t.coverUrl || '' };
+    };
+    const find = async id => {
+      if (isCov(id)) { const t = tracks.find(x => x.id === +id.slice(2)); return t && t.cover || null; }
+      return tx(['blobs'], 'readonly', x => x.objectStore('blobs').get(id));   // трек (число) или видео ('v:…') — ключ в хранилище тот же
+    };
     async function sendFile(id) {
       const my = ++token;
-      const blob = await tx(['blobs'], 'readonly', x => x.objectStore('blobs').get(id));
+      const blob = await find(id);
       if (!blob) { send(dc, { t: 'err', id }); return; }
       send(dc, { t: 'file', id, size: blob.size, type: blob.type || '' });
       for (let o = 0; o < blob.size; o += 262144) {
@@ -3950,15 +3985,24 @@ const SYNC = (() => {
         }
         onState({ prog: Math.min(1, (o + slab.byteLength) / blob.size), bytes });
       }
-      send(dc, { t: 'end', id }); sent++; onState({ sent, bytes, prog: 1 });
+      send(dc, { t: 'end', id }); if (typeof id === 'number') sent++; onState({ sent, bytes, prog: 1 });
+    }
+    // Список может быть большим, а сообщение канала ограничено ~256 КБ — режем на части
+    async function sendList() {
+      if (listing) return; listing = true;
+      try {
+        const items = []; for (const t of tracks) { if (t.stream) continue; items.push(await describe(t)); if (items.length % 200 === 0) await new Promise(r => setTimeout(r, 0)); }
+        const vids = {}; items.forEach(o => { if (o.vid) vids[o.vid] = +o.vid.slice(o.vid.lastIndexOf('|') + 1) || 0; });
+        const str = JSON.stringify({ v: 2, items, vids, backup: backupData() }), PART = 40000, n = Math.max(1, Math.ceil(str.length / PART)), id = ++sid;
+        for (let k = 0; k < n; k++) { await drain(); if (dc.readyState !== 'open') return; send(dc, { t: 'list', sid: id, k, n, s: str.slice(k * PART, (k + 1) * PART) }); }
+        onState({ listed: items.length });
+      } finally { listing = false; }
     }
     dc.onmessage = async e => {
       if (typeof e.data !== 'string') return;
       let m; try { m = JSON.parse(e.data); } catch (x) { return; }
-      if (m.t === 'list') {
-        const items = tracks.filter(t => !t.stream).map(t => ({ id: t.id, name: t.name, size: t.size, title: t.title || '', artist: t.artist || '' }));
-        send(dc, { t: 'list', items }); onState({ listed: items.length });
-      } else if (m.t === 'get') { onState({ sending: m.id, ...info(m.id) }); try { await sendFile(m.id); } catch (x) { try { send(dc, { t: 'err', id: m.id }); } catch (y) {} } }
+      if (m.t === 'list') { try { await sendList(); } catch (x) {} }
+      else if (m.t === 'get') { onState({ sending: m.id, ...info(m.id) }); try { await sendFile(m.id); } catch (x) { try { send(dc, { t: 'err', id: m.id }); } catch (y) {} } }
       else if (m.t === 'cancel') token++;
     };
   }
@@ -4128,38 +4172,109 @@ const SYNC = (() => {
       setStage(2); badge.classList.add('ok'); sb.textContent = 'Mac подключён'; say('', ''); keepAwake(); actions();
       body.replaceChildren(wait('Сверяю библиотеки…')); dc.binaryType = 'arraybuffer';
       dc.onclose = () => { if (!closed) lost(); };
+      const gl = { sid: 0, n: 0, cnt: 0, parts: [] };
+      const connLost = e => closed || stopped || !dc || dc.readyState !== 'open';
+      const hasV = async vk => { try { return (await tx(['blobs'], 'readonly', x => x.objectStore('blobs').count('v:' + vk))) > 0; } catch (e) { return false; } };
       const onList = e => {
         if (typeof e.data !== 'string') return; let m; try { m = JSON.parse(e.data); } catch (x) { return; }
-        if (m.t !== 'list') return; dc.removeEventListener('message', onList); gotList = true;
-        const have = new Set(tracks.map(keyOf)), miss = m.items.filter(i => !have.has(keyOf(i)));
-        if (!miss.length) { finish('Всё уже на месте', `На Mac ${pl(m.items.length, ['трек', 'трека', 'треков'])}, и все они уже есть на этом iPhone.`); return; }
-        const total = miss.reduce((s, i) => s + (i.size || 0), 0) || 1;
+        if (m.t !== 'list') return;
+        if (!gl.sid) { gl.sid = m.sid; gl.n = m.n; }
+        if (m.sid !== gl.sid || gl.parts[m.k] != null) return;
+        gl.parts[m.k] = m.s; if (++gl.cnt < gl.n) return;
+        dc.removeEventListener('message', onList); gotList = true;
+        let d; try { d = JSON.parse(gl.parts.join('')); } catch (x) { fail('Не удалось прочитать список с Mac. Обновите «Музыку» на Mac.'); return; }
+        plan(d).catch(() => fail('Не удалось сверить библиотеки.'));
+      };
+      async function plan(d) {
+        const items = d.items || [], v2 = d.v >= 2, vids = d.vids || {};
+        const have = new Map(tracks.map(t => [keyOf(t), t])), miss = [], upd = [];
+        for (const i of items) { const t = have.get(keyOf(i)); if (!t) miss.push(i); else if (v2 && t.msig !== i.sig) upd.push({ i, t }); }
+        // сколько ещё надо скачать кроме самих треков: обложки и видео
+        let total = miss.reduce((s, i) => s + (i.size || 0), 0); const seenV = new Set();
+        for (const { i, t } of [...miss.map(i => ({ i })), ...upd]) {
+          if (!v2) break;
+          if (i.ch && !(t && t.mch === i.ch)) total += i.cs || 0;
+          if (i.vid && !(t && t.vid === i.vid) && !seenV.has(i.vid)) { seenV.add(i.vid); if (!(await hasV(i.vid))) total += vids[i.vid] || 0; }
+        }
+        total = total || 1;
+        if (!miss.length && !upd.length) {
+          let r = null; if (d.backup) { try { r = await applyBackupData(d.backup, true); } catch (e) {} }
+          if (closed) return;
+          finish('Всё уже на месте', `На Mac ${pl(items.length, ['трек', 'трека', 'треков'])}, и все они уже есть на этом iPhone — вместе с названиями и обложками.` + (r && r.pls ? ' Плейлисты и любимое тоже сверены.' : '')); return;
+        }
         const dev = h('div', 'sy-card sy-dev'), ic = h('div', 'sy-devic'), dt = h('div'); ic.append(icon('sylap', true)); dt.append(h('b', null, 'Mac'), h('span', null, 'Готов отдать музыку')); dev.append(ic, dt);
-        const tiles = h('div', 'sy-tiles'); tiles.append(tile(m.items.length, 'На Mac'), tile(m.items.length - miss.length, 'Уже здесь'), tile(miss.length, 'Не хватает', true));
-        const go = btn(`Скачать ${miss.length} · ${mb(total)}`, 'pri', start, 'dl');
-        body.replaceChildren(dev, tiles, go, h('p', 'sy-txt sy-c', 'Держите экран включённым, пока идёт передача.'));
+        const tiles = h('div', 'sy-tiles'); tiles.append(tile(items.length, 'На Mac'), tile(items.length - miss.length, 'Уже здесь'), miss.length ? tile(miss.length, 'Не хватает', true) : tile(upd.length, 'Изменились', true));
+        const label = miss.length ? `Скачать ${miss.length} · ${mb(total)}` + (upd.length ? ` и обновить ${upd.length}` : '') : `Обновить ${upd.length} · ${mb(total)}`;
+        const go = btn(label, 'pri', start, 'dl');
+        const note = miss.length || upd.length ? 'Вместе с треками придут названия, исполнители, обложки, видео-обложки, плейлисты и любимое. ' : '';
+        body.replaceChildren(dev, tiles, go, h('p', 'sy-txt sy-c', note + 'Держите экран включённым, пока идёт передача.'));
         async function start() {
-          busy = true; stopped = false; let got = 0, ok = 0, bad = 0;
+          busy = true; stopped = false; let got = 0, ok = 0, bad = 0, upn = 0, covers = 0, loops = 0;
           const row = nowRow('', '', ''), pb = pbar(), meta = h('div', 'sy-meta'), cnt = h('span'), sp = h('span'), cd = h('div', 'sy-card');
           meta.append(cnt, sp); cd.append(row, pb, meta);
           const stop = btn('Остановить', 'ghost', () => { stopped = true; try { cancelRef.abort && cancelRef.abort(); } catch (e) {} }, 'systop');
           body.replaceChildren(cd, stop); sb.textContent = 'Идёт передача';
           const t0 = Date.now(); let lastUi = 0;
-          const upd = () => { pb.set(got / total); const el = (Date.now() - t0) / 1000, v = el > .5 ? got / el : 0; sp.textContent = v ? spd(v) + (etaTx((total - got) / v) ? ' · ещё ' + etaTx((total - got) / v) : '') : ''; };
-          for (let i = 0; i < miss.length && !closed && !stopped; i++) {
-            const it = miss[i]; row.set(it.title || it.name, it.artist || 'Неизвестный исполнитель'); cnt.textContent = `${i + 1} из ${miss.length}`;
+          const upd2 = () => { pb.set(got / total); const el = (Date.now() - t0) / 1000, v = el > .5 ? got / el : 0; sp.textContent = v ? spd(v) + (etaTx((total - got) / v) ? ' · ещё ' + etaTx((total - got) / v) : '') : ''; };
+          const onB = n => { got += n; const nw = Date.now(); if (nw - lastUi > 200) { lastUi = nw; upd2(); } };
+          const grab = async id => { const r = await fetchFile(dc, id, onB, cancelRef); return new Blob(r.parts, { type: r.type || '' }); };
+          const vDone = new Set();
+          // Применяет к треку всё, что было на Mac: название, исполнителя, альбом, жанр, обложку и видео-обложку
+          async function pullMeta(i, t, isNew) {
+            let complete = true, cover, vid;
+            if (i.ch) {
+              if (t.mch !== i.ch) { try { cover = await grab('c:' + i.id); covers++; } catch (e) { if (connLost()) throw e; complete = false; } }
+            } else if (t.mch && t.cover) cover = null;
+            if (i.vid) {
+              if (t.vid !== i.vid) {
+                let okv = vDone.has(i.vid) || await hasV(i.vid);
+                if (!okv) {
+                  try { const bl = await grab('v:' + i.vid); await tx(['blobs'], 'readwrite', x => x.objectStore('blobs').put(bl, 'v:' + i.vid)); vDone.add(i.vid); okv = true; loops++; }
+                  catch (e) { if (connLost()) throw e; complete = false; }
+                }
+                if (okv) vid = i.vid;
+              }
+            } else if (t.mvid && t.vid === t.mvid) vid = '';
+            const oldV = t.vid, changed = t.title !== i.title || (t.artist || '') !== (i.artist || '');
+            if (i.title) t.title = i.title; t.artist = i.artist || ''; t.album = i.album || '';
+            if (i.genre !== undefined) t.genre = i.genre; if (i.gn !== undefined) t.gn = i.gn;
+            if (i.raw) t.raw = i.raw; else delete t.raw;
+            if (i.ed) t.ed = true; else delete t.ed;
+            if (isNew && i.added) t.added = i.added;
+            if (cover !== undefined) {
+              if (t.coverUrl) URL.revokeObjectURL(t.coverUrl);
+              t.cover = cover; t.coverUrl = cover ? URL.createObjectURL(cover) : ''; delete t.tint; delete t.pal; delete t._du; t.cv2 = t.cv3 = t.cv4 = true; t.mch = i.ch || '';
+            }
+            if (vid !== undefined) { if (vid) { t.vid = vid; t.mvid = vid; } else { delete t.vid; delete t.mvid; } }
+            if (complete) t.msig = i.sig; else delete t.msig;   // не всё скачалось — в следующий раз попробуем ещё раз
+            await saveMeta(t); syncPlItems(t);
+            if (oldV !== t.vid) gcLoops([oldV]);
+            if (changed || cover !== undefined) afterMetaChange(t);
+          }
+          const jobs = [...miss.map(i => ({ i })), ...upd];
+          for (let k = 0; k < jobs.length && !closed && !stopped; k++) {
+            const { i } = jobs[k]; let t = jobs[k].t, isNew = false;
+            row.set(i.title || i.name, i.artist || 'Неизвестный исполнитель'); cnt.textContent = `${k + 1} из ${jobs.length}`;
             try {
-              const { parts, type } = await fetchFile(dc, it.id, n => { got += n; const nw = Date.now(); if (nw - lastUi > 200) { lastUi = nw; upd(); } }, cancelRef);
-              await importFiles([new File(parts, it.name, { type: type || 'audio/mpeg' })], true); ok++;
+              if (!t) {
+                const { parts, type } = await fetchFile(dc, i.id, onB, cancelRef);
+                await importFiles([new File(parts, i.name, { type: type || 'audio/mpeg' })], true);
+                t = tracks.find(x => x.name === i.name && x.size === i.size); if (!t) throw new Error('import'); isNew = true; ok++;
+              } else upn++;
+              if (v2) await pullMeta(i, t, isNew);
             } catch (err) {
               if (closed || stopped) break; bad++;
               if (dc.readyState !== 'open') { busy = false; badge.classList.remove('ok'); say('Соединение оборвалось. Нажмите «Начать заново»: уже скачанное повторно не загрузится.', 'err'); actions(retryBtn()); render(false); return; }
             }
           }
-          busy = false; render(false);
+          let r = null; if (!closed && !stopped && d.backup) { try { r = await applyBackupData(d.backup, true); } catch (e) {} }
+          busy = false; render(false); if (curId != null && byId(curId)) updateNow();
           if (closed) return;
-          const tail = bad ? ` Не удалось: ${bad}.` : '';
-          if (stopped) finish('Остановлено', `Добавлено треков: ${ok}.` + tail); else finish('Готово', `Добавлено треков: ${ok}.` + tail + ' Они играют без интернета.');
+          const parts = [];
+          if (ok) parts.push(`добавлено треков: ${ok}`); if (upn) parts.push(`обновлено: ${upn}`); if (covers) parts.push(`обложек: ${covers}`); if (loops) parts.push(`видео-обложек: ${loops}`);
+          if (r && r.pls) parts.push(`плейлистов: ${r.pls}`); if (bad) parts.push(`не удалось: ${bad}`);
+          const txt = (parts.length ? parts.join(' · ').replace(/^./, c => c.toUpperCase()) + '.' : '');
+          if (stopped) finish('Остановлено', txt); else finish('Готово', txt + ' Всё играет без интернета.');
         }
       };
       let gotList = false, tries = 0; dc.addEventListener('message', onList); send(dc, { t: 'list' });

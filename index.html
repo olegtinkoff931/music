@@ -2189,8 +2189,7 @@ function afterMetaChange(t) {   // тексты песен ищутся зано
   render(false);
   if (t.id === curId) {
     updateNow();
-    if ('mediaSession' in navigator) try { navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: t.artist, album: t.album,
-      artwork: t.coverUrl ? [{ src: t.coverUrl, sizes: '512x512', type: t.cover ? t.cover.type : 'image/jpeg' }] : [] }); } catch (e) {}
+    setMediaMeta(t);
   }
 }
 // ---------- поиск обложки в интернете (iTunes + Deezer) ----------
@@ -2893,8 +2892,7 @@ async function play(id, ids, fromHist, keep) {
   if (!t.stream) { t.plays = (t.plays || 0) + 1; t.last = Date.now(); saveMeta(t).catch(() => {}); }
   try { await el.play(); audioUnlocked = true; } catch (e) { toast(t.stream ? 'Не удалось воспроизвести трек. Проверьте интернет.' : 'Не удалось воспроизвести этот формат'); }
   updateNow(); markCurrent();
-  if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: t.artist, album: t.album,
-    artwork: t.coverUrl ? [{ src: t.coverUrl, sizes: '512x512', type: t.cover ? t.cover.type : 'image/jpeg' }] : [] });
+  setMediaMeta(t);
 }
 let bgFlip = 0, ambFlip = 0;
 // цвет стеклянных панелей: оттенок обложки, ограниченный по яркости, чтобы текст всегда читался
@@ -2931,6 +2929,20 @@ function flipText(el, dir) {
   if (!FX.flip || !el || !el.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   el.animate([{ transform: `translateX(${dir * 14}px)`, opacity: 0, filter: 'blur(4px)' }, { transform: 'none', opacity: 1, filter: 'blur(0)' }], { duration: 520, easing: 'cubic-bezier(.2,.9,.3,1)' });
 }
+// Обложка для экрана блокировки / Dynamic Island. iOS забирает её отдельным процессом и не умеет открывать blob:-ссылки (будет белый квадрат),
+// поэтому отдаём data:-URL (JPEG), а если обложки нет — иконку приложения.
+let metaSeq = 0;
+async function setMediaMeta(t) {
+  if (!t || !('mediaSession' in navigator)) return;
+  const my = ++metaSeq;
+  let src = '';
+  try { src = await coverData(t); } catch (e) {}
+  if (!src && t.coverUrl && !/^blob:/.test(t.coverUrl)) src = t.coverUrl;
+  if (!src) { try { src = new URL('icon-512.png', location.href).href; } catch (e) {} }
+  if (my !== metaSeq) return;
+  const type = src.startsWith('data:') ? src.slice(5, src.indexOf(';')) : undefined;
+  try { navigator.mediaSession.metadata = new MediaMetadata({ title: t.title || '', artist: t.artist || '', album: t.album || '', artwork: src ? [{ src, sizes: '512x512', ...(type ? { type } : {}) }] : [] }); } catch (e) {}
+}
 let updSeq = 0, curSeenId = null;
 async function updateNow() {
   const t = byId(curId), my = ++updSeq; updExtra();
@@ -2947,7 +2959,7 @@ async function updateNow() {
   paint($('#bCover'), cu, seed, true, true); paint($('#fCover'), cu, seed, true, true);
   mountLoop($('#bCover'), t); mountLoop($('#fCover'), t);
   miniCover(cu, my);
-  if (t && cu && 'mediaSession' in navigator) { try { navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: t.artist, album: t.album, artwork: [{ src: cu, sizes: '512x512' }] }); } catch (e) {} }
+  setMediaMeta(t);
   paintFavs();
   const tint = await tintOf(t, cu); if (my !== updSeq) return;
   document.documentElement.style.setProperty('--tint', tint); setVizColor(tint); setGlass(tint);
@@ -3023,8 +3035,7 @@ function gapStart() {   // переключение на заранее загр
   if (!t.stream && pre.blob) specStart(id, pre.blob); else { specTok++; spec = null; }
   if (!t.stream) { t.plays = (t.plays || 0) + 1; t.last = Date.now(); saveMeta(t).catch(() => {}); }
   updateNow(); markCurrent();
-  if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: t.artist, album: t.album,
-    artwork: t.coverUrl ? [{ src: t.coverUrl, sizes: '512x512', type: t.cover ? t.cover.type : 'image/jpeg' }] : [] });
+  setMediaMeta(t);
 }
 function next(auto) {
   navDir = 1;
@@ -4955,7 +4966,7 @@ async function resumeLast() {
   const u = URL.createObjectURL(blob); elUrl.set(audio, u); audio.src = u; audio.playbackRate = FX.speed;
   audio.addEventListener('loadedmetadata', () => { if (r.pos > 0 && r.pos < audio.duration - 2) audio.currentTime = r.pos; }, { once: true });
   updateNow(); markCurrent();
-  if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: t.artist, album: t.album, artwork: t.coverUrl ? [{ src: t.coverUrl, sizes: '512x512', type: t.cover ? t.cover.type : 'image/jpeg' }] : [] });
+  setMediaMeta(t);
 }
 
 (async () => {

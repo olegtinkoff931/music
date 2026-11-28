@@ -1870,7 +1870,8 @@ function cardEl(g, i, art, mk, subText) {
 
 // ---------- playlists ----------
 let playlists = []; try { playlists = JSON.parse(localStorage.getItem('mp2pl') || '[]'); } catch (e) {}
-const savePl = () => { try { localStorage.setItem('mp2pl', JSON.stringify(playlists)); } catch (e) { toast('Не удалось сохранить плейлисты'); } };
+let plHook = null;
+const savePl = () => { if (plHook) { try { plHook(); } catch (e) {} } try { localStorage.setItem('mp2pl', JSON.stringify(playlists)); } catch (e) { toast('Не удалось сохранить плейлисты'); } };
 const norm = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 const ID3G = ['Blues', 'Classic Rock', 'Country', 'Dance', 'Disco', 'Funk', 'Grunge', 'Hip-Hop', 'Jazz', 'Metal', 'New Age', 'Oldies', 'Other', 'Pop', 'R&B', 'Rap', 'Reggae', 'Rock', 'Techno', 'Industrial', 'Alternative', 'Ska', 'Death Metal', 'Pranks', 'Soundtrack', 'Euro-Techno', 'Ambient', 'Trip-Hop', 'Vocal', 'Jazz+Funk', 'Fusion', 'Trance', 'Classical', 'Instrumental', 'Acid', 'House', 'Game', 'Sound Clip', 'Gospel', 'Noise', 'AlternRock', 'Bass', 'Soul', 'Punk', 'Space', 'Meditative', 'Instrumental Pop', 'Instrumental Rock', 'Ethnic', 'Gothic', 'Darkwave', 'Techno-Industrial', 'Electronic', 'Pop-Folk', 'Eurodance', 'Dream', 'Southern Rock', 'Comedy', 'Cult', 'Gangsta', 'Top 40', 'Christian Rap', 'Pop/Funk', 'Jungle', 'Native American', 'Cabaret', 'New Wave', 'Psychedelic', 'Rave', 'Showtunes', 'Trailer', 'Lo-Fi', 'Tribal', 'Acid Punk', 'Acid Jazz', 'Polka', 'Retro', 'Musical', 'Rock & Roll', 'Hard Rock'];
 const GN_SKIP = /^(?:other|unknown|genre|undefined|none|music|музыка)$/i;
@@ -2659,7 +2660,7 @@ function setView(v, detail) { if (selMode) exitSel(); nav.view = v; nav.detail =
 // ---------- favorites / delete ----------
 async function toggleFav(t) {
   if (t.stream) { toast('Сначала скачайте трек в медиатеку', 2200); return; }
-  t.fav = !t.fav; paintFavs(); favFx(t); await saveMeta(t); paintFavs();
+  t.fav = !t.fav; t.fu = Date.now(); paintFavs(); favFx(t); await saveMeta(t); paintFavs();
   $('#cFav').textContent = tracks.filter(x => x.fav).length || '';
   if (nav.view === 'fav' && !nav.detail) setTimeout(() => render(false), 350);
 }
@@ -2711,7 +2712,7 @@ function toggleSel(id, range) {
 }
 async function bulkFav(list) {
   if (!list.length) return; const on = !list.every(t => t.fav);
-  for (const t of list) { t.fav = on; try { await saveMeta(t); } catch (e) {} }
+  for (const t of list) { t.fav = on; t.fu = Date.now(); try { await saveMeta(t); } catch (e) {} }
   paintFavs(); $('#cFav').textContent = tracks.filter(x => x.fav).length || '';
   toast(on ? `В любимом: +${list.length}` : `Убрано из любимого: ${list.length}`, 1600);
   if (nav.view === 'fav' && !nav.detail) render(false);
@@ -3973,7 +3974,7 @@ async function applyPend() {   // применяет любимое и исто�
 }
 const _importFiles = importFiles; importFiles = async (...a) => { const r = await _importFiles(...a); await applyPend(); return r; };
 // Применяет данные копии: плейлисты, любимое, историю. mirror — режим переноса с Mac: плейлисты с тем же id обновляются целиком (имя, обложка)
-async function applyBackupData(d, mirror) {
+async function applyBackupData(d, mirror, noStats) {
   const same = (x, i) => (i.aud && x.aud === i.aud) || (norm(x.t) === norm(i.t) && norm(x.a) === norm(i.a));
   for (const p of d.playlists || []) {
     const items = (p.items || []).map(i => i.aud ? i : { ...i, id: undefined }), ex = playlists.find(x => x.id === p.id);
@@ -3981,9 +3982,9 @@ async function applyBackupData(d, mirror) {
     else playlists.push({ ...p, items });
   }
   savePl();
-  (d.fav || []).forEach(f => { const k = keyOf({ title: f.t, artist: f.a }); pend[k] = { ...pend[k], fav: true }; });
-  (d.hist || []).forEach(x => { const k = keyOf({ title: x.t, artist: x.a }); const o = pend[k] || {}; pend[k] = { ...o, plays: Math.max(o.plays || 0, x.plays || 0), last: Math.max(o.last || 0, x.last || 0), secs: Math.max(o.secs || 0, x.secs || 0) }; });
-  for (const [k, v] of Object.entries(d.days || {})) statDays[k] = Math.max(statDays[k] || 0, v); saveDays();
+  if (!noStats) (d.fav || []).forEach(f => { const k = keyOf({ title: f.t, artist: f.a }); pend[k] = { ...pend[k], fav: true }; });
+  if (!noStats) (d.hist || []).forEach(x => { const k = keyOf({ title: x.t, artist: x.a }); const o = pend[k] || {}; pend[k] = { ...o, plays: Math.max(o.plays || 0, x.plays || 0), last: Math.max(o.last || 0, x.last || 0), secs: Math.max(o.secs || 0, x.secs || 0) }; });
+  if (!noStats) for (const [k, v] of Object.entries(d.days || {})) statDays[k] = Math.max(statDays[k] || 0, v); saveDays();
   savePend(); const n = await applyPend(); render(false);
   return { n, left: Object.keys(pend).length, pls: (d.playlists || []).length };
 }
@@ -3997,6 +3998,184 @@ async function importBackup(file) {
 // ---------- перенос музыки по Wi‑Fi (Mac раздаёт, iPhone подтягивает) ----------
 // Прямое соединение WebRTC между двумя устройствами в одной сети: без сервера и без интернета.
 // Чтобы установить связь, устройства один раз обмениваются короткими кодами (удобно через общий буфер обмена Apple).
+// ---------- общий профиль: один аккаунт, плейлисты, любимое и статистика на всех устройствах ----------
+// Устройства сливаются без сервера, по тому же прямому каналу, что и перенос музыки. Каждое слияние безопасно повторять:
+//  · плейлисты — по времени последнего изменения (u), удалённые помнятся как «надгробия»;
+//  · любимое — побеждает более поздний выбор;
+//  · прослушивания и время — у каждого устройства свой счётчик, итог — сумма, поэтому ничего не теряется и не удваивается;
+//  · аккаунт (имя, email, защитный хэш пароля) переезжает на второе устройство, и пароль там тот же.
+const PS = (() => {
+  const KEY = 'mpps', CHUNK = 40000;
+  const lg = e => { try { logErr(e); } catch (x) {} };
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const rnd = () => { const a = new Uint8Array(8); try { crypto.getRandomValues(a); } catch (e) { for (let i = 0; i < 8; i++) a[i] = Math.random() * 256; } return [...a].map(x => x.toString(16).padStart(2, '0')).join(''); };
+  let G = { dev: '', on: {} };
+  try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.dev) G = { dev: String(s.dev), on: s.on || {} }; } catch (e) { lg(e); }
+  const saveG = () => { try { localStorage.setItem(KEY, JSON.stringify(G)); } catch (e) { lg(e); } };
+  if (!G.dev) { G.dev = rnd(); saveG(); }
+  let applying = false, cache = { id: null, s: null }, seq = 0;
+  const bad = k => k === '__proto__' || k === 'constructor' || k === 'prototype';
+  const num = v => (Number.isFinite(+v) ? Math.max(0, +v) : 0);
+  const fnvh = str => { let x = 2166136261; for (let i = 0; i < str.length; i++) { x ^= str.charCodeAt(i); x = Math.imul(x, 16777619) >>> 0; } return x.toString(36); };
+  const pkey = i => i.aud || norm(i.t) + '|' + norm(i.a);
+  const sigOf = p => fnvh(JSON.stringify({ ...p, u: 0, items: (p.items || []).map(pkey) }));
+  const S = () => {
+    const id = ACC.id(); if (cache.id === id && cache.s) return cache.s;
+    let s = null; try { s = JSON.parse(localStorage.getItem(KEY + ':' + id) || 'null'); } catch (e) { lg(e); }
+    s = Object.assign({ others: {}, fav: {}, tomb: {}, sigs: {}, init: 0, last: 0 }, s || {});
+    if (!s.init) { for (const p of playlists) if (p.id != null) s.sigs[p.id] = sigOf(p); s.init = 1; }
+    cache = { id, s }; return s;
+  };
+  const saveS = () => { if (!cache.s) return; try { localStorage.setItem(KEY + ':' + cache.id, JSON.stringify(cache.s)); } catch (e) { lg(e); } };
+  const trackMap = () => { const m = new Map(); for (const t of tracks) { if (t.stream) continue; const k = keyOf(t); if (!m.has(k)) m.set(k, t); } return m; };
+  const othersSum = s => {
+    const k = {}, d = {};
+    for (const o of Object.values(s.others)) {
+      for (const [key, v] of Object.entries(o.own || {})) { const a = k[key] || (k[key] = [0, 0, 0]); a[0] += v[0]; a[1] += v[1]; a[2] = Math.max(a[2], v[2]); }
+      for (const [day, v] of Object.entries(o.days || {})) d[day] = (d[day] || 0) + v;
+    }
+    return { k, d };
+  };
+
+  // Вызывается из savePl: ставит время изменения плейлистам и запоминает удалённые
+  function touchPl() {
+    const s = S(), now = Date.now(), seen = new Set();
+    for (const p of playlists) {
+      if (p.id == null) continue; seen.add(String(p.id)); const sg = sigOf(p);
+      if (s.sigs[p.id] !== sg) { s.sigs[p.id] = sg; if (!applying) p.u = now; }
+    }
+    for (const id of Object.keys(s.sigs)) if (!seen.has(id)) { delete s.sigs[id]; if (!applying) s.tomb[id] = now; }
+    saveS();
+  }
+
+  // Что отдаём другому устройству
+  async function snapshot() {
+    const s = S(), m = trackMap(), fav = s.fav;
+    for (const [k, t] of m) { const e = fav[k], v = t.fav ? 1 : 0; if (t.fu && (!e || t.fu > e[1])) fav[k] = [v, t.fu]; else if (!e && v) fav[k] = [1, 1]; }
+    for (const [k, p] of Object.entries(pend)) if (!m.has(k) && p.fav && !fav[k]) fav[k] = [1, 1];
+    const oth = othersSum(s), own = {}, days = {}, keys = new Set([...m.keys(), ...Object.keys(pend)]);
+    for (const k of keys) {
+      const src = m.get(k) || pend[k] || {}, o = oth.k[k] || [0, 0, 0];
+      const pl = Math.max(0, Math.round(src.plays || 0) - o[0]), sc = Math.max(0, Math.round(src.secs || 0) - o[1]);
+      if (pl || sc || src.last) own[k] = [pl, sc, src.last || 0];
+    }
+    for (const [d, v] of Object.entries(statDays)) { const x = Math.max(0, Math.round(v) - (oth.d[d] || 0)); if (x) days[d] = x; }
+    touchPl(); saveS();
+    const pls = playlists.map(p => ({ ...p, items: (p.items || []).map(i => (i.aud ? i : { ...i, id: undefined })) }));
+    return { v: 1, dev: G.dev, at: Date.now(), accId: ACC.id(), pls, tomb: s.tomb, fav, own, days };
+  }
+
+  // Что делаем с тем, что пришло
+  async function mergeIn(r) {
+    const s = S(), m = trackMap(), out = { pls: 0, fav: 0, plays: 0 };
+    if (!r || r.v !== 1 || !r.dev || r.dev === G.dev) return out;
+    applying = true;
+    try {
+      // плейлисты
+      for (const [id, u] of Object.entries(r.tomb || {})) if (!bad(id) && (s.tomb[id] || 0) < num(u)) s.tomb[id] = num(u);
+      for (const id of Object.keys(s.tomb)) { const i = playlists.findIndex(p => String(p.id) === id); if (i >= 0 && (playlists[i].u || 0) <= s.tomb[id]) { playlists.splice(i, 1); out.pls++; } }
+      for (const rp of Array.isArray(r.pls) ? r.pls : []) {
+        if (!rp || rp.id == null || bad(String(rp.id)) || (s.tomb[rp.id] || 0) >= (rp.u || 0) && s.tomb[rp.id]) continue;
+        const items = (Array.isArray(rp.items) ? rp.items : []).map(i => { if (i.aud || i.id != null) return i; const t = m.get(keyOf({ title: i.t, artist: i.a })); return t ? { ...i, id: t.id } : i; });
+        const np = { ...rp, items }, i = playlists.findIndex(p => String(p.id) === String(rp.id));
+        if (i < 0) { playlists.push(np); out.pls++; } else if ((rp.u || 0) > (playlists[i].u || 0)) { playlists[i] = np; out.pls++; }
+      }
+      const live = new Set(playlists.map(p => String(p.id)));
+      for (const p of playlists) if (p.id != null) s.sigs[p.id] = sigOf(p);
+      for (const id of Object.keys(s.sigs)) if (!live.has(id)) delete s.sigs[id];
+      savePl();
+      // любимое
+      const touched = [];
+      for (const [k, e] of Object.entries(r.fav || {})) { if (bad(k) || !Array.isArray(e)) continue; const u = num(e[1]), c = s.fav[k]; if (!c || u > c[1]) { s.fav[k] = [e[0] ? 1 : 0, u]; touched.push(k); } }
+      for (const k of touched) {
+        const [v, u] = s.fav[k], t = m.get(k);
+        if (t) { if (!!t.fav !== !!v) { t.fav = !!v; t.fu = u; out.fav++; try { await saveMeta(t); } catch (e) { lg(e); } } }
+        else if (v || pend[k]) { const p = pend[k] || (pend[k] = {}); if (!!p.fav !== !!v) { p.fav = !!v; out.fav++; } }
+      }
+      // прослушивания и время: к своим добавляется только прирост у остальных
+      const old = othersSum(s), cur = s.others[r.dev] || { own: {}, days: {} }, nk = { ...cur.own }, nd = { ...cur.days };
+      for (const [k, v] of Object.entries(r.own || {})) { if (bad(k) || !Array.isArray(v)) continue; const a = nk[k] || [0, 0, 0]; nk[k] = [Math.max(a[0], num(v[0])), Math.max(a[1], num(v[1])), Math.max(a[2], num(v[2]))]; }
+      for (const [d, v] of Object.entries(r.days || {})) if (!bad(d)) nd[d] = Math.max(nd[d] || 0, num(v));
+      s.others[r.dev] = { own: nk, days: nd, at: Date.now() };
+      const nw = othersSum(s);
+      for (const k of Object.keys(nw.k)) {
+        const o0 = old.k[k] || [0, 0, 0], n0 = nw.k[k], dp = n0[0] - o0[0], ds = n0[1] - o0[1], dl = n0[2] > o0[2];
+        if (!dp && !ds && !dl) continue;
+        const t = m.get(k); out.plays += dp;
+        if (t) { t.plays = (t.plays || 0) + dp; t.secs = (t.secs || 0) + ds; t.last = Math.max(t.last || 0, n0[2]); try { await saveMeta(t); } catch (e) { lg(e); } }
+        else { const p = pend[k] || (pend[k] = {}); p.plays = (p.plays || 0) + dp; p.secs = (p.secs || 0) + ds; p.last = Math.max(p.last || 0, n0[2]); }
+      }
+      for (const d of Object.keys(nw.d)) { const dl = nw.d[d] - (old.d[d] || 0); if (dl) statDays[d] = (statDays[d] || 0) + dl; }
+      saveDays(); savePend(); s.last = Date.now(); saveS();
+    } finally { applying = false; }
+    try { render(false); } catch (e) { lg(e); } try { if (typeof paintFavs === 'function') paintFavs(); } catch (e) { lg(e); }
+    return out;
+  }
+
+  // ---- обмен по каналу: большие сообщения режутся на части ----
+  async function sendBig(dc, kind, obj) {
+    const str = JSON.stringify(obj), n = Math.max(1, Math.ceil(str.length / CHUNK)), sid = ++seq;
+    for (let k = 0; k < n; k++) { while (dc.bufferedAmount > (1 << 20)) { if (dc.readyState !== 'open') return; await sleep(30); } if (dc.readyState !== 'open') return; dc.send(JSON.stringify({ t: kind, sid, k, n, s: str.slice(k * CHUNK, (k + 1) * CHUNK) })); }
+  }
+  const assembler = (kind, cb) => {
+    const asm = {};
+    return m => {
+      if (!m || m.t !== kind) return false;
+      const a = asm[m.sid] || (asm[m.sid] = { n: m.n, parts: [], cnt: 0 });
+      if (a.parts[m.k] == null) { a.parts[m.k] = m.s; a.cnt++; }
+      if (a.cnt === a.n) { delete asm[m.sid]; let o = null; try { o = JSON.parse(a.parts.join('')); } catch (e) { lg(e); } cb(o); }
+      return true;
+    };
+  };
+  const waitBig = (dc, kind, ms) => new Promise((res, rej) => {
+    let done = false;
+    const fin = (f, v) => { if (done) return; done = true; clearTimeout(tm); dc.removeEventListener('message', on); dc.removeEventListener('close', cl); f(v); };
+    const feed = assembler(kind, o => fin(res, o)), on = e => { if (typeof e.data !== 'string') return; let m; try { m = JSON.parse(e.data); } catch (x) { return; } feed(m); };
+    const cl = () => fin(rej, new Error('closed')), tm = setTimeout(() => fin(rej, new Error('timeout')), ms);
+    dc.addEventListener('message', on); dc.addEventListener('close', cl);
+  });
+
+  // Mac (раздающая сторона): отвечает на запросы iPhone
+  function host(dc) {
+    const hello = assembler('phello', async () => {
+      try { await sendBig(dc, 'phelloR', { dev: G.dev, accId: ACC.id(), acc: await ACC.linkExport() }); } catch (e) { lg(e); }
+    });
+    const prof = assembler('prof', async r => {
+      try {
+        if (!r) return;
+        if (r.acc && ACC.isGuest()) await ACC.linkAdopt(r.acc, false);
+        if (String(r.accId) !== String(ACC.id())) { await sendBig(dc, 'profr', { err: 'acc' }); return; }
+        const res = await mergeIn(r); G.on[ACC.id()] = true; saveG();
+        await sendBig(dc, 'profr', await snapshot());
+        toast(`Профиль синхронизирован с iPhone${res.pls || res.fav || res.plays ? ': плейлистов ' + res.pls + ', любимых ' + res.fav + ', прослушиваний ' + res.plays : ''}`, 3500);
+      } catch (e) { lg(e); try { await sendBig(dc, 'profr', { err: 'fail' }); } catch (x) {} }
+    });
+    return m => hello(m) || prof(m);
+  }
+
+  // iPhone (запрашивающая сторона): сначала сверяет аккаунт, потом обменивается профилем
+  async function clientSync(dc) {
+    let hello = null;
+    try { const w = waitBig(dc, 'phelloR', 6000); await sendBig(dc, 'phello', { dev: G.dev }); hello = await w; } catch (e) { return { skipped: 'old' }; }   // Mac без поддержки — тихо пропускаем
+    if (!hello) return { skipped: 'old' };
+    if (hello.acc && String(ACC.id()) !== String(hello.acc.id)) {
+      if (!ACC.isGuest() && !confirm(`На Mac аккаунт «${hello.acc.name}». Использовать его и на этом устройстве?\nВаш текущий аккаунт никуда не денется, но вы перейдёте на «${hello.acc.name}».`)) return { skipped: 'acc' };
+      await ACC.linkAdopt(hello.acc, true);
+    }
+    const mine = await snapshot();
+    if (!hello.acc && !ACC.isGuest()) mine.acc = await ACC.linkExport();
+    const w = waitBig(dc, 'profr', 60000); await sendBig(dc, 'prof', mine);
+    const back = await w;
+    if (!back || back.err) return { skipped: back && back.err === 'acc' ? 'acc' : 'fail' };
+    const res = await mergeIn(back); G.on[ACC.id()] = true; saveG();
+    return { ok: true, ...res };
+  }
+
+  function resync() { const s = S(); s.sigs = {}; for (const p of playlists) if (p.id != null) s.sigs[p.id] = sigOf(p); saveS(); }
+  async function quiet(fn) { applying = true; try { await fn(); } finally { applying = false; resync(); } }
+  function reset() { const s = S(); s.others = {}; s.fav = {}; s.tomb = {}; s.last = 0; delete G.on[ACC.id()]; saveG(); saveS(); }
+  return { quiet, touchPl, snapshot, mergeIn, host, clientSync, reset, on: () => !!G.on[ACC.id()], last: () => S().last || 0, devices: () => Object.keys(S().others).length, dev: G.dev, hook: () => { plHook = touchPl; } };
+})();
 const SYNC_ROLE = 'client'; // 'host' на Mac, 'client' на iPhone
 const SYNC = (() => {
   const CH = 16384, MAXBUF = 1 << 20;
@@ -4078,9 +4257,11 @@ const SYNC = (() => {
         onState({ listed: items.length });
       } finally { listing = false; }
     }
+    const ph = PS.host(dc);
     dc.onmessage = async e => {
       if (typeof e.data !== 'string') return;
       let m; try { m = JSON.parse(e.data); } catch (x) { return; }
+      if (ph(m)) return;
       if (m.t === 'list') { try { await sendList(); } catch (x) {} }
       else if (m.t === 'get') { onState({ sending: m.id, ...info(m.id) }); try { await sendFile(m.id); } catch (x) { try { send(dc, { t: 'err', id: m.id }); } catch (y) {} } }
       else if (m.t === 'cancel') token++;
@@ -4278,7 +4459,7 @@ const SYNC = (() => {
         }
         total = total || 1;
         if (!miss.length && !upd.length) {
-          let r = null; if (d.backup) { try { r = await applyBackupData(d.backup, true); } catch (e) {} }
+          let r = null; if (d.backup) { try { r = await applyBackupData(d.backup, true, PS.on()); } catch (e) {} }
           if (closed) return;
           finish('Всё уже на месте', `На Mac ${pl(items.length, ['трек', 'трека', 'треков'])}, и все они уже есть на этом iPhone — вместе с названиями и обложками.` + (r && r.pls ? ' Плейлисты и любимое тоже сверены.' : '')); return;
         }
@@ -4347,7 +4528,7 @@ const SYNC = (() => {
               if (dc.readyState !== 'open') { busy = false; badge.classList.remove('ok'); say('Соединение оборвалось. Нажмите «Начать заново»: уже скачанное повторно не загрузится.', 'err'); actions(retryBtn()); render(false); return; }
             }
           }
-          let r = null; if (!closed && !stopped && d.backup) { try { r = await applyBackupData(d.backup, true); } catch (e) {} }
+          let r = null; if (!closed && !stopped && d.backup) { try { r = await applyBackupData(d.backup, true, PS.on()); } catch (e) {} }
           busy = false; render(false); if (curId != null && byId(curId)) updateNow();
           if (closed) return;
           const parts = [];
@@ -4357,7 +4538,13 @@ const SYNC = (() => {
           if (stopped) finish('Остановлено', txt); else finish('Готово', txt + ' Всё играет без интернета.');
         }
       };
-      let gotList = false, tries = 0; dc.addEventListener('message', onList); send(dc, { t: 'list' });
+      let gotList = false, tries = 0; dc.addEventListener('message', onList);
+      (async () => {
+        let pr = null; try { pr = await PS.clientSync(dc); } catch (e) { try { logErr(e, 'profile-sync'); } catch (x) {} }
+        if (pr && pr.ok) toast(`Профиль синхронизирован с Mac${pr.pls || pr.fav || pr.plays ? ': плейлистов ' + pr.pls + ', любимых ' + pr.fav + ', прослушиваний ' + pr.plays : ''}`, 3500);
+        else if (pr && pr.skipped === 'acc') toast('Профиль не синхронизирован: на Mac другой аккаунт', 4000);
+        if (!closed && dc && dc.readyState === 'open') send(dc, { t: 'list' });
+      })();
       const retry = setInterval(() => { if (gotList || closed || !dc || dc.readyState !== 'open' || ++tries > 8) { clearInterval(retry); return; } try { send(dc, { t: 'list' }); } catch (e) {} }, 1500);
     }
     host ? hostStart() : clientStart();
@@ -4442,7 +4629,8 @@ const ACC = (() => {
     for (const t of tracks) if (t.fav || t.plays || t.last || t.secs) { t.fav = false; t.plays = 0; t.last = 0; t.secs = 0; await saveMeta(t); }
     try { localStorage.removeItem('mp2mix'); } catch (e) {}
   }
-  async function loadFor(id) {
+  async function loadFor(id) { await PS.quiet(() => loadFor0(id)); }
+  async function loadFor0(id) {
     await wipe(); const d = getData(id);
     if (d) { for (const [k, v] of Object.entries(d.pend || {})) if (k !== '__proto__') pend[k] = v; await applyBackupData(d, true); }
     nav.view = 'songs'; nav.detail = null; render(true); paint();
@@ -4569,6 +4757,7 @@ const ACC = (() => {
       [['edit', 'Изменить имя', () => askName('Ваше имя', v => { a.name = v.slice(0, 40); save(); paint(); toast('Имя обновлено'); }, a.name, 'Сохранить')],
        ['sliders', 'Сменить пароль', () => changePw(a)],
        ['user', 'Сменить аккаунт', () => openSwitch()],
+       ['user', 'Связанные устройства', () => linkInfo()],
        ['up', 'Сохранить аккаунт в файл', () => exportAcc()],
        ['logout', 'Выйти', async () => { await switchTo(null); toast('Вы вышли из аккаунта'); }],
        ['trash', 'Удалить аккаунт', () => delAcc(a), 'danger']]
@@ -4636,10 +4825,38 @@ const ACC = (() => {
     } catch (err) { toast('Это не файл аккаунта', 3500); }
   }
 
+  // ---------- общий профиль между устройствами ----------
+  async function linkExport() {
+    const a = me(); if (!a) return null; const hash = a.hash;
+    return { id: a.id, name: a.name, email: a.email, salt: a.salt, hash, it: a.it || IT, created: a.created, hue: a.hue, rks: a.rks, rkh: a.rkh };
+  }
+  async function linkAdopt(r, sw) {
+    if (!r || !r.id || !r.email || !r.salt || !r.hash) return null;
+    const e = mail(r.email); let a = st.list.find(x => x.id === String(r.id));
+    if (!a && st.list.some(x => x.email === e)) return null;
+    if (!a) { a = { id: String(r.id), name: String(r.name || e).slice(0, 40), email: e, salt: String(r.salt), hash: String(r.hash), it: +r.it || IT, created: +r.created || Date.now(), hue: +r.hue || 0 }; st.list.push(a); save(); }
+    if (st.cur !== a.id) {
+      if (!st.cur) { putData(a.id, snap()); st.cur = a.id; save(); }   // гость: его плейлисты и любимое переходят в аккаунт
+      else if (sw) await switchTo(a.id);
+    }
+    paint(); return a;
+  }
+  function linkInfo() {
+    modal((c, close) => {
+      const n = PS.devices(), t = PS.last();
+      c.append(h('h3', null, 'Связанные устройства'),
+        h('div', 'psub', 'Аккаунт, плейлисты, любимое и статистика объединяются с другими устройствами каждый раз, когда вы подключаете их друг к другу по Wi‑Fi (на Mac — «Раздать по Wi‑Fi», на iPhone — «Подтянуть с Mac»). Прослушивания с разных устройств складываются.'),
+        h('div', 'psub', t ? 'Последняя синхронизация: ' + new Date(t).toLocaleString('ru') + ' · других устройств: ' + n : 'Синхронизаций пока не было.'));
+      const b = h('div', 'mbtns'), rs = h('button', 'pill', 'Забыть связь'), ok = h('button', 'pill accent', 'Закрыть');
+      rs.onclick = () => { if (confirm('Забыть связь с другими устройствами? Плейлисты и статистика на этом устройстве останутся.')) { PS.reset(); close(); toast('Связь сброшена'); } }; ok.onclick = close; b.append(rs, ok); c.append(b);
+    });
+  }
+
   paint();
-  return { open: () => (me() ? openProfile() : openAuth('in')), label: () => (me() ? me().name : 'Войти в аккаунт'), importFile, paint };
+  return { open: () => (me() ? openProfile() : openAuth('in')), label: () => (me() ? me().name : 'Войти в аккаунт'), importFile, paint, id: owner, isGuest: () => !st.cur, linkExport, linkAdopt };
 })();
-$('#accBtn').onclick = () => ACC.open(); $('#accBtnM').onclick = () => ACC.open();
+$('#accBtn').onclick = () => ACC.open();
+PS.hook(); $('#accBtnM').onclick = () => ACC.open();
 $('#accIn').onchange = e => { if (e.target.files[0]) ACC.importFile(e.target.files[0]); e.target.value = ''; };
 
 // ===== умные подборки =====

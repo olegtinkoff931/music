@@ -526,7 +526,7 @@ html{-webkit-text-size-adjust:100%}body{overscroll-behavior:none}
 @media(max-width:700px){
   #app{grid-template-rows:auto auto auto minmax(0,1fr)}
   #main{grid-row:4}
-  .sidefoot #impPl,.sidefoot #expBk,.sidefoot #impBk,.sidefoot #syncBtn,.sidefoot #dupBtn{display:none}
+  .sidefoot #impPl,.sidefoot #expBk,.sidefoot #impBk,.sidefoot #syncBtn,.sidefoot #sendBtn,.sidefoot #dupBtn{display:none}
   #moreBtn{display:flex}
   .sidefoot{gap:8px;padding-right:16px}
   .addbtn{width:42px;height:42px}
@@ -923,6 +923,19 @@ body:not(.playing) .fmesh i,#full:not(.open) .fmesh i{animation-play-state:pause
 .sy-done{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:18px 8px}
 .sy-done .ck{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;background:rgba(50,213,131,.16);color:#32d583;margin-bottom:6px;animation:sypop .5s cubic-bezier(.3,1.6,.5,1) both}
 .sy-done .ck svg{width:38px;height:38px;stroke-width:2.6}
+.sy-opt{display:flex;align-items:center;gap:12px;padding:10px 2px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sy-opt input{flex:none;width:22px;height:22px;margin:0;accent-color:var(--accent)}
+.sy-opt .sy-ot{min-width:0;flex:1}
+.sy-opt .sy-ot b{display:block;font-size:14.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sy-opt .sy-ot span{display:block;color:var(--muted);font-size:12.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sy-opt.sm{padding:7px 2px}.sy-opt.sm b{font-size:13.5px;font-weight:600}
+.sy-grp{gap:2px}
+.sy-grphd{display:flex;align-items:center;gap:8px}.sy-grphd .sy-opt{flex:1;min-width:0}
+.sy-grphd .sy-link{flex:none;align-self:center;padding:8px 2px}
+.sy-list{max-height:250px;overflow:auto;border-top:1px solid var(--line);margin-top:4px;padding-top:6px;-webkit-overflow-scrolling:touch}
+.sy-list.off{display:none}
+.sy-list .synccode{width:100%;box-sizing:border-box;margin-bottom:4px}
+.sy-sep{height:1px;background:var(--line);margin:2px 0}
 .sy-done h4{margin:0;font-size:20px;font-weight:800}.sy-done p{margin:0;color:var(--muted);font-size:14px;max-width:320px}
 @keyframes sypop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
 @keyframes sysheet{from{transform:translateY(46px);opacity:0}to{transform:none;opacity:1}}
@@ -1063,7 +1076,8 @@ body:not(.playing) .fmesh i,#full:not(.open) .fmesh i{animation-play-state:pause
       <button class="addbtn" id="newPl" title="Новый плейлист"><svg class="s"><use href="#i-list"/></svg><span>Новый плейлист</span></button>
       <button class="addbtn" id="impPl" title="Выберите Library.xml / .m3u8 / .txt / .csv, экспортированные из Apple Music"><svg class="s"><use href="#i-dl"/></svg><span>Импорт плейлистов</span></button>
       <button class="addbtn" id="moreBtn" title="Ещё: копия, импорт, папка"><svg class="s"><use href="#i-more"/></svg><span>Ещё</span></button>
-      <button class="addbtn" id="syncBtn" title="Перенести недостающие треки с Mac по Wi‑Fi"><svg class="s"><use href="#i-wifi"/></svg><span>Подтянуть с Mac</span></button>
+      <button class="addbtn" id="sendBtn" title="Отправить музыку на другое устройство по Wi‑Fi: можно выбрать, что именно"><svg class="s"><use href="#i-wifi"/></svg><span>Раздать по Wi‑Fi</span></button>
+      <button class="addbtn" id="syncBtn" title="Принять музыку с Mac или другого телефона по Wi‑Fi"><svg class="s"><use href="#i-wifi"/></svg><span>Подтянуть по Wi‑Fi</span></button>
       <button class="addbtn" id="expBk" title="Сохранить плейлисты, любимое и историю в файл"><svg class="s"><use href="#i-up"/></svg><span>Резервная копия</span></button>
       <button class="addbtn" id="impBk" title="Восстановить из файла копии (в том числе с другого устройства)"><svg class="s"><use href="#i-dl"/></svg><span>Восстановить копию</span></button>
       <button class="addbtn primary" id="addFiles"><svg class="s"><use href="#i-plus"/></svg><span>Добавить файлы</span></button>
@@ -1787,7 +1801,7 @@ const filtered = () => {
 };
 
 const trackMenu = t => [['Играть следующей', () => queueAdd([t], true)], ['В конец очереди', () => queueAdd([t], false)], ['В плейлист…', () => openPlMenu([t])],
-  ...(t.stream ? [] : [['Включить похожее', () => playSimilar(t)], ['Выбрать', () => enterSel(t.id)], ['Изменить информацию…', () => editTrack(t)], [t.cover ? 'Другая обложка из интернета…' : 'Найти обложку…', () => coverSearch(coverQuery(t.artist, t.title), cv => applyCover(t, cv))]])];
+  ...(t.stream ? [] : [['Включить похожее', () => playSimilar(t)], ['Выбрать', () => enterSel(t.id)], ['Перекинуть этот трек…', () => SYNC.open('send', { ids: [t.id], pls: [], fav: false, stats: false })], ['Изменить информацию…', () => editTrack(t)], [t.cover ? 'Другая обложка из интернета…' : 'Найти обложку…', () => coverSearch(coverQuery(t.artist, t.title), cv => applyCover(t, cv))]])];
 function rowEl(t, ids) {
   const r = h('div', 'row' + (t.id === curId ? ' cur' : '')); r.dataset.id = t.id;
   const rc = h('div', 'rc'); rc.append(coverEl(t.coverUrl, t.album || t.title));
@@ -2367,6 +2381,7 @@ function plMenu(e, p) {
     ['Открыть', () => setView('pl:' + p.id, null)],
     ['Изменить обложку и описание…', () => editPlaylistInfo(p)],
     ['Редактировать песни…', () => editPlaylist(p)],
+    ['Перекинуть плейлист…', () => SYNC.open('send', { ids: [], pls: [p.id], plt: true, fav: false, stats: false })],
     ['Удалить плейлист', () => { if (confirm(`Удалить плейлист «${p.name}»?`)) { playlists = playlists.filter(x => x !== p); savePl(); if (nav.view === 'pl:' + p.id) setView('playlists'); else render(false); } }, 'danger']
   ]);
 }
@@ -2728,6 +2743,7 @@ selBar.addEventListener('click', e => {
   } else {
     const r = b.getBoundingClientRect(), items = [];
     if (list.length) items.push(['Играть следующей', () => { queueAdd(list, true); exitSel(); }], ['В конец очереди', () => { queueAdd(list, false); exitSel(); }]);
+    if (list.length > 1) { const ids = list.filter(t => !t.stream).map(t => t.id); if (ids.length) items.push(['Перекинуть выбранные…', () => { exitSel(); SYNC.open('send', { ids, pls: [], fav: false, stats: false }); }]); }
     if (list.length === 1) trackMenu(list[0]).slice(3).forEach(([lbl, fn]) => { if (lbl !== 'Выбрать') items.push([lbl, () => { exitSel(); fn(); }]); });
     items.push(['Выбрать все', () => { visibleIds().forEach(i => sel.add(i)); paintSel(); }]);
     showCtx({ preventDefault() {}, clientX: r.right, clientY: r.bottom + 6 }, items);
@@ -4136,7 +4152,7 @@ const PS = (() => {
   });
 
   // Mac (раздающая сторона): отвечает на запросы iPhone
-  function host(dc) {
+  function host(dc, cb) {
     const hello = assembler('phello', async () => {
       try { await sendBig(dc, 'phelloR', { dev: G.dev, accId: ACC.id(), acc: await ACC.linkExport() }); } catch (e) { lg(e); }
     });
@@ -4144,11 +4160,11 @@ const PS = (() => {
       try {
         if (!r) return;
         if (r.acc && ACC.isGuest()) await ACC.linkAdopt(r.acc, false);
-        if (String(r.accId) !== String(ACC.id())) { await sendBig(dc, 'profr', { err: 'acc' }); return; }
+        if (String(r.accId) !== String(ACC.id())) { await sendBig(dc, 'profr', { err: 'acc' }); if (cb) cb({ skipped: 'acc' }); return; }
         const res = await mergeIn(r); G.on[ACC.id()] = true; saveG();
         await sendBig(dc, 'profr', await snapshot());
-        toast(`Профиль синхронизирован с iPhone${res.pls || res.fav || res.plays ? ': плейлистов ' + res.pls + ', любимых ' + res.fav + ', прослушиваний ' + res.plays : ''}`, 3500);
-      } catch (e) { lg(e); try { await sendBig(dc, 'profr', { err: 'fail' }); } catch (x) {} }
+        if (cb) cb({ ok: true, ...res });
+      } catch (e) { lg(e); try { await sendBig(dc, 'profr', { err: 'fail' }); } catch (x) {} if (cb) cb({ skipped: 'fail' }); }
     });
     return m => hello(m) || prof(m);
   }
@@ -4216,7 +4232,7 @@ const SYNC = (() => {
     o.sig = fnvS([o.title, o.artist, o.album, JSON.stringify(o.genre === undefined ? '' : o.genre), o.ed ? 1 : 0, o.ch, o.vid].join('\u0001'));
     return o;
   }
-  function serve(dc, onState) {
+  function serve(dc, sel, onState) {
     dc.binaryType = 'arraybuffer'; let token = 0, sent = 0, bytes = 0, sid = 0, listing = false;
     dc.bufferedAmountLowThreshold = 256 * 1024;
     const drain = () => dc.bufferedAmount < MAXBUF ? Promise.resolve() : new Promise(r => { const f = () => { dc.removeEventListener('bufferedamountlow', f); r(); }; dc.addEventListener('bufferedamountlow', f); });
@@ -4230,7 +4246,10 @@ const SYNC = (() => {
       if (isCov(id)) { const t = tracks.find(x => x.id === +id.slice(2)); return t && t.cover || null; }
       return tx(['blobs'], 'readonly', x => x.objectStore('blobs').get(id));   // трек (число) или видео ('v:…') — ключ в хранилище тот же
     };
+    // что разрешено отдавать: только отмеченное при выборе (sel == null — всё, как у Mac)
+    const okId = id => !sel || (isVid(id) ? sel.covers : isCov(id) ? sel.covers && sel.ids.has(+id.slice(2)) : sel.ids.has(id));
     async function sendFile(id) {
+      if (!okId(id)) { send(dc, { t: 'err', id }); return; }
       const my = ++token;
       const blob = await find(id);
       if (!blob) { send(dc, { t: 'err', id }); return; }
@@ -4250,18 +4269,17 @@ const SYNC = (() => {
     async function sendList() {
       if (listing) return; listing = true;
       try {
-        const items = []; for (const t of tracks) { if (t.stream) continue; items.push(await describe(t)); if (items.length % 200 === 0) await new Promise(r => setTimeout(r, 0)); }
+        const items = []; for (const t of tracks) { if (t.stream || (sel && !sel.ids.has(t.id))) continue; items.push(await describe(t)); if (items.length % 200 === 0) await new Promise(r => setTimeout(r, 0)); }
         const vids = {}; items.forEach(o => { if (o.vid) vids[o.vid] = +o.vid.slice(o.vid.lastIndexOf('|') + 1) || 0; });
-        const str = JSON.stringify({ v: 2, items, vids, backup: backupData() }), PART = 40000, n = Math.max(1, Math.ceil(str.length / PART)), id = ++sid;
+        const bk = backupData(), backup = !sel ? bk : { ...bk, playlists: bk.playlists.filter(p => sel.pls.has(p.id)), fav: sel.fav ? bk.fav : [], hist: sel.stats ? bk.hist : [], days: sel.stats ? bk.days : {} };
+        const str = JSON.stringify({ v: 2, items, vids, backup, nocov: !!sel && !sel.covers, what: sel ? { cov: sel.covers, pls: sel.pls.size > 0, fav: sel.fav, stats: sel.stats } : undefined }), PART = 40000, n = Math.max(1, Math.ceil(str.length / PART)), id = ++sid;
         for (let k = 0; k < n; k++) { await drain(); if (dc.readyState !== 'open') return; send(dc, { t: 'list', sid: id, k, n, s: str.slice(k * PART, (k + 1) * PART) }); }
         onState({ listed: items.length });
       } finally { listing = false; }
     }
-    const ph = PS.host(dc);
     dc.onmessage = async e => {
       if (typeof e.data !== 'string') return;
       let m; try { m = JSON.parse(e.data); } catch (x) { return; }
-      if (ph(m)) return;
       if (m.t === 'list') { try { await sendList(); } catch (x) {} }
       else if (m.t === 'get') { onState({ sending: m.id, ...info(m.id) }); try { await sendFile(m.id); } catch (x) { try { send(dc, { t: 'err', id: m.id }); } catch (y) {} } }
       else if (m.t === 'cancel') token++;
@@ -4279,7 +4297,7 @@ const SYNC = (() => {
           let m; try { m = JSON.parse(e.data); } catch (x) { return; }
           if (m.id !== id) return;
           if (m.t === 'file') { size = m.size; type = m.type; started = true; }
-          else if (m.t === 'err') fail(new Error('Файл не найден на Mac'));
+          else if (m.t === 'err') fail(new Error('Файл не найден у отправителя'));
           else if (m.t === 'end') {
             dc.removeEventListener('message', on); dc.removeEventListener('close', onClose);
             if (got !== size) rej(new Error('Файл получен не полностью')); else res({ parts, type });
@@ -4293,9 +4311,9 @@ const SYNC = (() => {
   }
 
   // ===== интерфейс =====
-  function ui(c, close) {
-    const host = SYNC_ROLE === 'host';
-    let pc = null, dc = null, wake = null, closed = false, busy = false, stopped = false, applied = false, pasteH = null; const cancelRef = {};
+  function ui(c, close, mode, preset) {
+    const host = mode === 'send', link = mode === 'link';
+    let pc = null, dc = null, wake = null, closed = false, busy = false, stopped = false, applied = false, pasteH = null, sel = null; const cancelRef = {};
     const dropPaste = () => { if (pasteH) { document.removeEventListener('paste', pasteH, true); pasteH = null; } };
     const dropPc = () => { try { cancelRef.abort && cancelRef.abort(); } catch (e) {} cancelRef.abort = null; try { pc && pc.close(); } catch (e) {} pc = dc = null; };
     const shut = () => { closed = true; dropPc(); dropPaste(); try { wake && wake.release(); } catch (e) {} };
@@ -4313,10 +4331,10 @@ const SYNC = (() => {
 
     c.classList.add('sy');
     const badge = h('div', 'sy-badge'); badge.append(icon('wifi', true), h('i'), h('i'));
-    const sb = h('p'), ttl = h('h3', null, host ? 'Раздать музыку по Wi‑Fi' : 'Подтянуть музыку с Mac'), hdx = h('div'); hdx.append(ttl, sb);
+    const sb = h('p'), ttl = h('h3', null, link ? (host ? 'Связать с iPhone' : 'Связать с Mac') : host ? 'Раздать музыку по Wi‑Fi' : 'Подтянуть музыку по Wi‑Fi'), hdx = h('div'); hdx.append(ttl, sb);
     const hd = h('div', 'sy-head'); hd.append(badge, hdx);
     const stp = h('div', 'sy-steps'), dots = [], lns = [];
-    ['Код', 'Ответ', 'Передача'].forEach((l, i) => { if (i) { const ln = h('div', 'sy-ln'); lns.push(ln); stp.append(ln); } const s = h('div', 'sy-st'); s.append(h('b', null, String(i + 1)), h('span', null, l)); dots.push(s); stp.append(s); });
+    ['Код', 'Ответ', link ? 'Синхронизация' : 'Передача'].forEach((l, i) => { if (i) { const ln = h('div', 'sy-ln'); lns.push(ln); stp.append(ln); } const s = h('div', 'sy-st'); s.append(h('b', null, String(i + 1)), h('span', null, l)); dots.push(s); stp.append(s); });
     const setStage = k => {
       dots.forEach((s, i) => { s.className = 'sy-st' + (i < k ? ' done' : i === k ? ' on' : ''); s.firstChild.replaceChildren(i < k ? icon('check', true) : document.createTextNode(String(i + 1))); });
       lns.forEach((l, i) => l.classList.toggle('done', i < k));
@@ -4331,7 +4349,7 @@ const SYNC = (() => {
     if (!window.RTCPeerConnection) { setStage(0); body.append(catMsgLite('Это устройство не поддерживает прямое соединение (WebRTC). Обновите систему.')); return; }
     function catMsgLite(t) { const d = h('div', 'sy-card'); d.append(h('p', 'sy-txt', t)); return d; }
 
-    const restart = () => { dropPc(); dropPaste(); applied = false; busy = false; stopped = false; badge.classList.remove('ok'); actions(); say('', ''); host ? hostStart() : clientStart(); };
+    const restart = () => { dropPc(); dropPaste(); applied = false; busy = false; stopped = false; badge.classList.remove('ok'); actions(); say('', ''); host ? (sel ? hostStart() : pickStart()) : clientStart(); };
     const retryBtn = () => btn('Начать заново', 'pri', restart);
     const fail = msg => { say(msg, 'err'); if (!busy) actions(retryBtn()); };
     const mkPc = () => {
@@ -4352,26 +4370,79 @@ const SYNC = (() => {
       return [chip, ta, lk];
     };
 
+    // ---------- что отправить ----------
+    function pickStart() {
+      stp.style.display = 'none'; sb.textContent = 'Выберите, что отправить'; say('', ''); actions();
+      const real = tracks.filter(t => !t.stream), pre = preset || {};
+      const plCache = new Map(), plTr = p => { let a = plCache.get(p.id); if (!a) { a = plTracks(p).filter(t => !t.stream).map(t => t.id); plCache.set(p.id, a); } return a; };
+      const st = { ids: new Set(pre.ids || real.map(t => t.id)), pls: new Set(pre.pls || playlists.map(p => p.id)), plt: pre.plt != null ? pre.plt : true, fav: pre.fav != null ? pre.fav : true, stats: pre.stats != null ? pre.stats : true, covers: pre.covers != null ? pre.covers : true };
+      const eff = () => { const e = new Set(st.ids); if (st.plt) st.pls.forEach(id => { const p = playlists.find(x => x.id === id); if (p) plTr(p).forEach(i => e.add(i)); }); return e; };
+      const opt = (title, sub, on, fn, sm) => {
+        const r = h('label', 'sy-opt' + (sm ? ' sm' : '')), cb = document.createElement('input'), tx = h('div', 'sy-ot'), b = h('b', null, title), sp = h('span', null, sub || '');
+        cb.type = 'checkbox'; cb.checked = !!on; tx.append(b); if (sub != null) tx.append(sp); r.append(cb, tx); cb.onchange = () => fn(cb.checked); r.cb = cb; r.sub = sp; return r;
+      };
+      let refresh = () => {};
+      // группа с раскрывающимся списком: треки или плейлисты
+      const group = (title, items, set, sub1, onSet) => {
+        const box = h('div', 'sy-card sy-grp'), hd = h('div', 'sy-grphd'), list = h('div', 'sy-list off'), rows = [];
+        const paint = () => {
+          head.cb.checked = set.size > 0; head.cb.indeterminate = set.size > 0 && set.size < items.length;
+          head.sub.textContent = set.size + ' из ' + items.length + (sub1 ? ' · ' + sub1() : '');
+          rows.forEach(x => { x.r.cb.checked = set.has(x.id); });
+        };
+        const head = opt(title, '', set.size > 0, v => { if (v) items.forEach(i => set.add(i.id)); else set.clear(); paint(); onSet(); refresh(); });
+        const more = h('button', 'sy-link', 'Выбрать…'); let built = false;
+        more.onclick = () => {
+          const open = list.classList.toggle('off'); more.textContent = open ? 'Выбрать…' : 'Свернуть';
+          if (!open && !built) {
+            built = true;
+            if (items.length > 12) { const q = document.createElement('input'); q.className = 'synccode'; q.placeholder = 'Поиск'; q.autocapitalize = 'off'; q.spellcheck = false; q.oninput = () => { const v = q.value.trim().toLowerCase(); rows.forEach(x => { x.r.style.display = !v || x.k.includes(v) ? '' : 'none'; }); }; list.append(q); }
+            items.forEach(i => { const r = opt(i.t, i.s, set.has(i.id), v => { if (v) set.add(i.id); else set.delete(i.id); paint(); onSet(); refresh(); }, true); rows.push({ r, id: i.id, k: (i.t + ' ' + (i.s || '')).toLowerCase() }); list.append(r); });
+          }
+        };
+        hd.append(head, more); box.append(hd, list); box.paint = paint; paint(); return box;
+      };
+      const gT = real.length ? group('Треки', real.map(t => ({ id: t.id, t: t.title || t.name, s: t.artist || 'Неизвестный исполнитель' })), st.ids, () => mb(real.filter(t => st.ids.has(t.id)).reduce((a, t) => a + (t.size || 0), 0)), () => {}) : null;
+      const gP = playlists.length ? group('Плейлисты', playlists.map(p => ({ id: p.id, t: p.name, s: pl((p.items || []).length, ['песня', 'песни', 'песен']) })), st.pls, null, () => {}) : null;
+      const sum = h('p', 'sy-txt sy-c');
+      const go = btn('Продолжить', 'pri', () => {
+        sel = { ids: eff(), pls: new Set(st.pls), fav: st.fav, stats: st.stats, covers: st.covers };
+        hostStart();
+      }, 'wifi');
+      refresh = () => {
+        const e = eff(); let sz = 0; for (const t of real) if (e.has(t.id)) sz += t.size || 0;
+        sum.textContent = 'К отправке: ' + pl(e.size, ['трек', 'трека', 'треков']) + ' · ' + mb(sz) + (st.pls.size ? ' · плейлистов: ' + st.pls.size : '');
+        go.disabled = !(e.size || st.pls.size || st.fav || st.stats);
+        if (gT) gT.paint();
+      };
+      const oPlt = opt('Добавить треки выбранных плейлистов', 'Чтобы плейлисты играли на другом устройстве целиком', st.plt, v => { st.plt = v; refresh(); });
+      const flags = h('div', 'sy-card sy-grp');
+      flags.append(opt('Любимое', 'Отметки «сердечком»', st.fav, v => { st.fav = v; refresh(); }), opt('История и статистика', 'Прослушивания и время', st.stats, v => { st.stats = v; refresh(); }), opt('Обложки и видео-обложки', 'Без галочки передаются только сами песни', st.covers, v => { st.covers = v; refresh(); }));
+      const intro = h('p', 'sy-txt', 'Отметьте галочками, что отправить на другое устройство. Остальное останется только у вас.');
+      body.replaceChildren(...[intro, gT, gP, gP ? oPlt : null, flags, sum, go].filter(Boolean)); refresh();
+      if (!real.length && !playlists.length) say('Пока нечего отправлять — добавьте песни.', 'err');
+    }
+
     // ---------- Mac ----------
     function hostStart() {
-      setStage(0); sb.textContent = 'Напрямую, без интернета'; body.replaceChildren(wait('Готовлю код…'));
+      stp.style.display = ''; setStage(0); sb.textContent = 'Напрямую, без интернета'; body.replaceChildren(wait('Готовлю код…'));
       (async () => {
         const p = mkPc(); dc = p.createDataChannel('lib'); dc.onopen = () => { if (!closed && pc === p) connectedHost(); };
         await p.setLocalDescription(await p.createOffer()); await gathered(p); if (closed || pc !== p) return;
         const code = enc(p.localDescription.sdp);
         const t1 = area('', true); t1.value = code; t1.classList.add('hid');
-        const cA = card('1', 'Скопируйте код', 'Он уже в буфере обмена. На iPhone откройте «Подтянуть с Mac» и нажмите «Вставить код» — общий буфер Apple перенесёт текст сам.');
+        const cA = card('1', 'Скопируйте код', 'Он уже в буфере обмена. На втором устройстве откройте «' + (link ? 'Связать с Mac' : 'Подтянуть по Wi‑Fi') + '» и нажмите «Вставить код» — общий буфер Apple перенесёт текст сам.');
         const cp = copyBtn('Скопировать код', code, t1, false, () => { markDone(cA); setStage(1); });
         cA.append(...codeBlock(code, t1), cp);
-        const cB = card('2', 'Вставьте ответ с iPhone', 'На iPhone появится ответный код. Просто нажмите ⌘V в этом окне — подключение начнётся само.');
+        const cB = card('2', 'Вставьте ответ со второго устройства', 'На втором устройстве появится ответный код. ' + (IOS ? 'Нажмите «Вставить ответ» — подключение начнётся само.' : 'Просто нажмите ⌘V в этом окне — подключение начнётся само.'));
         const t2 = area('или вставьте ответ сюда вручную');
         const apply = async () => {
-          if (applied) return; let sdp; try { sdp = dec(t2.value); } catch (e) { say('Это не похоже на код с iPhone.', 'err'); return; }
+          if (applied) return; let sdp; try { sdp = dec(t2.value); } catch (e) { say('Это не похоже на ответный код.', 'err'); return; }
           applied = true; pasteAns.disabled = true; say('', '');
-          try { await pc.setRemoteDescription({ type: 'answer', sdp }); setStage(2); markDone(cA); markDone(cB); [cA, cB].forEach(d => [...d.children].slice(1).forEach(e => e.remove())); body.append(wait('Соединяюсь с iPhone…')); }
+          try { await pc.setRemoteDescription({ type: 'answer', sdp }); setStage(2); markDone(cA); markDone(cB); [cA, cB].forEach(d => [...d.children].slice(1).forEach(e => e.remove())); body.append(wait('Соединяюсь…')); }
           catch (e) { applied = false; pasteAns.disabled = false; fail('Код не подошёл. Нажмите «Начать заново» и повторите.'); }
         };
-        const pasteAns = btn('Вставить ответ', 'pri', async () => { const s = await readClip(); if (s && /MP1\./.test(s)) { t2.value = s; apply(); } else { t2.focus(); say('Нажмите ⌘V — код вставится сам.', 'busy'); } }, 'sypaste');
+        const pasteAns = btn('Вставить ответ', 'pri', async () => { const s = await readClip(); if (s && /MP1\./.test(s)) { t2.value = s; apply(); } else { t2.focus(); say(IOS ? 'Нажмите в поле ниже и выберите «Вставить».' : 'Нажмите ⌘V — код вставится сам.', 'busy'); } }, 'sypaste');
         t2.oninput = () => { if (/MP1\./.test(t2.value) && t2.value.replace(/\s/g, '').length > 80) apply(); };
         dropPaste(); pasteH = e => { const s = (e.clipboardData && e.clipboardData.getData('text')) || ''; if (/MP1\./.test(s)) { e.preventDefault(); t2.value = s; apply(); } };
         document.addEventListener('paste', pasteH, true);
@@ -4380,14 +4451,15 @@ const SYNC = (() => {
       })().catch(() => fail('Не удалось подготовить соединение.'));
     }
     function connectedHost() {
-      dropPaste(); setStage(2); badge.classList.add('ok'); sb.textContent = 'iPhone подключён'; say('Оставьте это окно открытым и не давайте Mac уснуть.', 'ok'); keepAwake(); actions();
-      const dev = h('div', 'sy-card sy-dev'), ic = h('div', 'sy-devic'), dt = h('div'), dn = h('b', null, 'iPhone'), ds = h('span', null, 'Ждёт команду…');
+      if (link) { linkHost(); return; }
+      dropPaste(); setStage(2); badge.classList.add('ok'); sb.textContent = 'Устройство подключено'; say('Оставьте это окно открытым и не давайте устройству уснуть.', 'ok'); keepAwake(); actions();
+      const dev = h('div', 'sy-card sy-dev'), ic = h('div', 'sy-devic'), dt = h('div'), dn = h('b', null, 'Второе устройство'), ds = h('span', null, 'Ждёт команду…');
       ic.append(icon('syphone', true)); dt.append(dn, ds); dev.append(ic, dt);
-      const tl = tile(0, 'В библиотеке'), ts = tile(0, 'Отправлено', true), tb = tile('0 КБ', 'Передано'), tiles = h('div', 'sy-tiles'); tiles.append(tl, ts, tb);
+      const tl = tile(0, 'К отправке'), ts = tile(0, 'Отправлено', true), tb = tile('0 КБ', 'Передано'), tiles = h('div', 'sy-tiles'); tiles.append(tl, ts, tb);
       const cardNow = h('div', 'sy-card'), pb = pbar(); let row = null; cardNow.style.display = 'none';
       body.replaceChildren(dev, tiles, cardNow);
       let lastB = 0, lastT = Date.now(), v = 0;
-      serve(dc, s => {
+      serve(dc, sel, s => {
         if (s.listed != null) { tl.set(s.listed); ds.textContent = 'Сверяет библиотеки'; }
         if (s.sending != null) {
           cardNow.style.display = ''; cardNow.replaceChildren(); row = nowRow(s.cover, s.title, s.artist); cardNow.append(row, pb); pb.set(0); ds.textContent = 'Получает файлы';
@@ -4402,26 +4474,53 @@ const SYNC = (() => {
       dc.onclose = () => { if (!closed) lost(); };
     }
 
+    // ---------- связка профиля (отдельно от переноса музыки) ----------
+    let fin = false;
+    function linkDone(r) {
+      fin = true; badge.classList.remove('ok');
+      const cnt = r && r.ok && (r.pls || r.fav || r.plays) ? `Плейлистов: ${r.pls} · любимых: ${r.fav} · прослушиваний: ${r.plays}.` : 'Всё уже совпадает.';
+      if (r && r.ok) finish('Устройства связаны', cnt + ' Дальше при каждой связке данные будут объединяться, а музыку по-прежнему переносит «' + (host ? 'Раздать по Wi‑Fi' : 'Подтянуть по Wi‑Fi') + '».');
+      else if (r && r.skipped === 'acc') finish('Не связано', host ? 'На iPhone другой аккаунт, и переключаться на аккаунт с Mac он не стал.' : 'На Mac другой аккаунт, и вы отказались переключаться на него.', false);
+      else if (r && r.skipped === 'old') finish('Не связано', 'Mac не ответил на связку. Откройте на Mac «Связать с iPhone» (а не «Раздать по Wi‑Fi») и убедитесь, что там стоит новая версия.', false);
+      else finish('Не удалось связать', 'Что-то пошло не так по дороге. Попробуйте ещё раз.', false);
+    }
+    function linkHost() {
+      dropPaste(); setStage(2); badge.classList.add('ok'); sb.textContent = 'Устройство подключено'; say('Оставьте это окно открытым и не давайте устройству уснуть.', 'ok'); keepAwake(); actions();
+      body.replaceChildren(wait('Синхронизирую профиль…'));
+      const ph = PS.host(dc, linkDone);
+      dc.onmessage = e => { if (typeof e.data !== 'string') return; let m; try { m = JSON.parse(e.data); } catch (x) { return; } ph(m); };
+      dc.onclose = () => { if (!closed && !fin) lost(); };
+    }
+    function linkClient() {
+      setStage(2); badge.classList.add('ok'); sb.textContent = 'Mac подключён'; say('', ''); keepAwake(); actions();
+      body.replaceChildren(wait('Синхронизирую профиль…'));
+      dc.onclose = () => { if (!closed && !fin) lost(); };
+      (async () => {
+        let pr = null; try { pr = await PS.clientSync(dc); } catch (e) { try { logErr(e, 'profile-sync'); } catch (x) {} }
+        if (!closed) linkDone(pr);
+      })();
+    }
+
     // ---------- iPhone ----------
     function clientStart() {
       setStage(0); sb.textContent = 'Напрямую, без интернета';
-      const cA = card('1', 'Вставьте код с Mac', 'На Mac откройте «Раздать по Wi‑Fi» — код скопируется сам и придёт сюда через общий буфер Apple.');
+      const cA = card('1', 'Вставьте код со второго устройства', 'На втором устройстве откройте «' + (link ? (SYNC_ROLE === 'host' ? 'Связать с Mac' : 'Связать с iPhone') : 'Раздать по Wi‑Fi') + '» — код скопируется сам и придёт сюда через общий буфер Apple.');
       const t1 = area('или вставьте код сюда вручную');
       const apply = async () => {
-        if (applied) return; let sdp; try { sdp = dec(t1.value); } catch (e) { say('Это не похоже на код с Mac.', 'err'); return; }
+        if (applied) return; let sdp; try { sdp = dec(t1.value); } catch (e) { say('Это не похоже на код.', 'err'); return; }
         applied = true; pasteBtn.disabled = true; markDone(cA); [...cA.children].slice(1).forEach(e => e.remove()); say('', ''); body.replaceChildren(cA, wait('Готовлю ответ…'));
         try {
           const p = mkPc(); p.ondatachannel = e => { dc = e.channel; if (dc.readyState === 'open') connectedClient(); else dc.onopen = () => { if (!closed && pc === p) connectedClient(); }; };
           await p.setRemoteDescription({ type: 'offer', sdp }); await p.setLocalDescription(await p.createAnswer()); await gathered(p); if (closed || pc !== p) return;
           const code = enc(p.localDescription.sdp); setStage(1);
           const t2 = area('', true); t2.value = code; t2.classList.add('hid');
-          const cB = card('2', 'Скопируйте ответ', 'Вставьте его в окне на Mac — достаточно нажать ⌘V. После этого соединение установится само.');
+          const cB = card('2', 'Скопируйте ответ', 'Вставьте его на втором устройстве — там достаточно нажать «Вставить ответ» (на Mac — ⌘V). После этого соединение установится само.');
           const cp = copyBtn('Скопировать ответ', code, t2, false, () => {});
-          cB.append(cp, ...codeBlock(code, t2), wait('Ждём, пока Mac примет ответ…'));
+          cB.append(cp, ...codeBlock(code, t2), wait('Ждём, пока второе устройство примет ответ…'));
           body.replaceChildren(cA, cB); copyText(code, t2).then(ok => cp.mark(ok, false));
-        } catch (e) { applied = false; say('Код не подошёл. Скопируйте свежий код на Mac.', 'err'); clientStart(); }
+        } catch (e) { applied = false; say('Код не подошёл. Скопируйте свежий код на втором устройстве.', 'err'); clientStart(); }
       };
-      const pasteBtn = btn('Вставить код с Mac', 'pri', async () => { const s = await readClip(); if (s && /MP1\./.test(s)) { t1.value = s; apply(); } else { t1.focus(); say('Нажмите в поле ниже и выберите «Вставить».', 'busy'); } }, 'sypaste');
+      const pasteBtn = btn('Вставить код', 'pri', async () => { const s = await readClip(); if (s && /MP1\./.test(s)) { t1.value = s; apply(); } else { t1.focus(); say('Нажмите в поле ниже и выберите «Вставить».', 'busy'); } }, 'sypaste');
       t1.oninput = () => { if (/MP1\./.test(t1.value) && t1.value.replace(/\s/g, '').length > 80) apply(); };
       cA.append(pasteBtn, t1); body.replaceChildren(cA);
     }
@@ -4430,7 +4529,8 @@ const SYNC = (() => {
       d.append(ck, h('h4', null, title), h('p', null, text)); body.replaceChildren(d); say('', ''); actions();
     }
     function connectedClient() {
-      setStage(2); badge.classList.add('ok'); sb.textContent = 'Mac подключён'; say('', ''); keepAwake(); actions();
+      if (link) { linkClient(); return; }
+      setStage(2); badge.classList.add('ok'); sb.textContent = 'Устройство подключено'; say('', ''); keepAwake(); actions();
       body.replaceChildren(wait('Сверяю библиотеки…')); dc.binaryType = 'arraybuffer';
       dc.onclose = () => { if (!closed) lost(); };
       const gl = { sid: 0, n: 0, cnt: 0, parts: [] };
@@ -4443,7 +4543,7 @@ const SYNC = (() => {
         if (m.sid !== gl.sid || gl.parts[m.k] != null) return;
         gl.parts[m.k] = m.s; if (++gl.cnt < gl.n) return;
         dc.removeEventListener('message', onList); gotList = true;
-        let d; try { d = JSON.parse(gl.parts.join('')); } catch (x) { fail('Не удалось прочитать список с Mac. Обновите «Музыку» на Mac.'); return; }
+        let d; try { d = JSON.parse(gl.parts.join('')); } catch (x) { fail('Не удалось прочитать список. Обновите «Музыку» на втором устройстве.'); return; }
         plan(d).catch(() => fail('Не удалось сверить библиотеки.'));
       };
       async function plan(d) {
@@ -4453,7 +4553,7 @@ const SYNC = (() => {
         // сколько ещё надо скачать кроме самих треков: обложки и видео
         let total = miss.reduce((s, i) => s + (i.size || 0), 0); const seenV = new Set();
         for (const { i, t } of [...miss.map(i => ({ i })), ...upd]) {
-          if (!v2) break;
+          if (!v2 || d.nocov) break;
           if (i.ch && !(t && t.mch === i.ch)) total += i.cs || 0;
           if (i.vid && !(t && t.vid === i.vid) && !seenV.has(i.vid)) { seenV.add(i.vid); if (!(await hasV(i.vid))) total += vids[i.vid] || 0; }
         }
@@ -4461,13 +4561,14 @@ const SYNC = (() => {
         if (!miss.length && !upd.length) {
           let r = null; if (d.backup) { try { r = await applyBackupData(d.backup, true, PS.on()); } catch (e) {} }
           if (closed) return;
-          finish('Всё уже на месте', `На Mac ${pl(items.length, ['трек', 'трека', 'треков'])}, и все они уже есть на этом iPhone — вместе с названиями и обложками.` + (r && r.pls ? ' Плейлисты и любимое тоже сверены.' : '')); return;
+          finish('Всё уже на месте', `Предложено: ${pl(items.length, ['трек', 'трека', 'треков'])}, и все они уже есть здесь` + (d.nocov ? '.' : ' — вместе с названиями и обложками.') + (r && r.pls ? ' Плейлисты и любимое тоже сверены.' : '')); return;
         }
-        const dev = h('div', 'sy-card sy-dev'), ic = h('div', 'sy-devic'), dt = h('div'); ic.append(icon('sylap', true)); dt.append(h('b', null, 'Mac'), h('span', null, 'Готов отдать музыку')); dev.append(ic, dt);
-        const tiles = h('div', 'sy-tiles'); tiles.append(tile(items.length, 'На Mac'), tile(items.length - miss.length, 'Уже здесь'), miss.length ? tile(miss.length, 'Не хватает', true) : tile(upd.length, 'Изменились', true));
+        const dev = h('div', 'sy-card sy-dev'), ic = h('div', 'sy-devic'), dt = h('div'); ic.append(icon('sylap', true)); dt.append(h('b', null, 'Второе устройство'), h('span', null, 'Готово отдать музыку')); dev.append(ic, dt);
+        const tiles = h('div', 'sy-tiles'); tiles.append(tile(items.length, 'Предложено'), tile(items.length - miss.length, 'Уже здесь'), miss.length ? tile(miss.length, 'Не хватает', true) : tile(upd.length, 'Изменились', true));
         const label = miss.length ? `Скачать ${miss.length} · ${mb(total)}` + (upd.length ? ` и обновить ${upd.length}` : '') : `Обновить ${upd.length} · ${mb(total)}`;
         const go = btn(label, 'pri', start, 'dl');
-        const note = miss.length || upd.length ? 'Вместе с треками придут названия, исполнители, обложки, видео-обложки, плейлисты и любимое. ' : '';
+        const w = d.what || { cov: !d.nocov, pls: true, fav: true, stats: false };
+        const note = miss.length || upd.length ? 'Вместе с треками придут названия и исполнители' + (w.cov ? ', обложки и видео-обложки' : '') + (w.pls ? ', плейлисты' : '') + (w.fav ? ', любимое' : '') + (w.stats ? ', история' : '') + '. ' : '';
         body.replaceChildren(dev, tiles, go, h('p', 'sy-txt sy-c', note + 'Держите экран включённым, пока идёт передача.'));
         async function start() {
           busy = true; stopped = false; let got = 0, ok = 0, bad = 0, upn = 0, covers = 0, loops = 0;
@@ -4482,11 +4583,12 @@ const SYNC = (() => {
           const vDone = new Set();
           // Применяет к треку всё, что было на Mac: название, исполнителя, альбом, жанр, обложку и видео-обложку
           async function pullMeta(i, t, isNew) {
-            let complete = true, cover, vid;
-            if (i.ch) {
+            const nc = !!d.nocov; let complete = true, cover, vid;
+            if (nc && ((i.ch && t.mch !== i.ch) || (i.vid && t.vid !== i.vid))) complete = false;   // обложки не отправляли — в следующий раз подтянутся
+            if (nc) {} else if (i.ch) {
               if (t.mch !== i.ch) { try { cover = await grab('c:' + i.id); covers++; } catch (e) { if (connLost()) throw e; complete = false; } }
             } else if (t.mch && t.cover) cover = null;
-            if (i.vid) {
+            if (nc) {} else if (i.vid) {
               if (t.vid !== i.vid) {
                 let okv = vDone.has(i.vid) || await hasV(i.vid);
                 if (!okv) {
@@ -4539,22 +4641,18 @@ const SYNC = (() => {
         }
       };
       let gotList = false, tries = 0; dc.addEventListener('message', onList);
-      (async () => {
-        let pr = null; try { pr = await PS.clientSync(dc); } catch (e) { try { logErr(e, 'profile-sync'); } catch (x) {} }
-        if (pr && pr.ok) toast(`Профиль синхронизирован с Mac${pr.pls || pr.fav || pr.plays ? ': плейлистов ' + pr.pls + ', любимых ' + pr.fav + ', прослушиваний ' + pr.plays : ''}`, 3500);
-        else if (pr && pr.skipped === 'acc') toast('Профиль не синхронизирован: на Mac другой аккаунт', 4000);
-        if (!closed && dc && dc.readyState === 'open') send(dc, { t: 'list' });
-      })();
+      send(dc, { t: 'list' });
       const retry = setInterval(() => { if (gotList || closed || !dc || dc.readyState !== 'open' || ++tries > 8) { clearInterval(retry); return; } try { send(dc, { t: 'list' }); } catch (e) {} }, 1500);
     }
-    host ? hostStart() : clientStart();
+    host ? pickStart() : clientStart();
   }
-  return { open: () => modal(ui) };
+  return { open: (mode, preset) => modal((c, close) => ui(c, close, mode, preset)) };
 })();;
 $('#syncBtn').onclick = () => SYNC.open();
+$('#sendBtn').onclick = () => SYNC.open('send');
 $('#moreBtn').onclick = () => modal((c, close) => {
   c.append(h('h3', null, 'Ещё')); const box = h('div', 'mlist');
-  [['user', ACC.label(), () => ACC.open()], ['wifi', 'Подтянуть с Mac', () => SYNC.open()], ['up', 'Сохранить резервную копию', exportBackup], ['dl', 'Восстановить из копии', () => $('#bkIn').click()], ['list', 'Импорт плейлистов из Apple Music', () => $('#plIn').click()], ['folder', 'Добавить папку', () => $('#dirIn').click()], ['trash', 'Найти дубли', () => findDuplicates()]]
+  [['user', ACC.label(), () => ACC.open()], ['wifi', 'Раздать по Wi‑Fi', () => SYNC.open('send')], ['wifi', 'Подтянуть по Wi‑Fi', () => SYNC.open()], ['user', SYNC_ROLE === 'host' ? 'Связать с iPhone' : 'Связать с Mac', () => SYNC.open('link')], ['up', 'Сохранить резервную копию', exportBackup], ['dl', 'Восстановить из копии', () => $('#bkIn').click()], ['list', 'Импорт плейлистов из Apple Music', () => $('#plIn').click()], ['folder', 'Добавить папку', () => $('#dirIn').click()], ['trash', 'Найти дубли', () => findDuplicates()]]
     .forEach(([ic, l, fn]) => { const b = h('button', 'mitem'); b.append(icon(ic, true), h('span', null, l)); b.onclick = () => { close(); fn(); }; box.append(b); });
   c.append(box); const st = $('#stat').textContent; if (st) c.append(h('div', 'psub', st));
 });
@@ -4845,10 +4943,10 @@ const ACC = (() => {
     modal((c, close) => {
       const n = PS.devices(), t = PS.last();
       c.append(h('h3', null, 'Связанные устройства'),
-        h('div', 'psub', 'Аккаунт, плейлисты, любимое и статистика объединяются с другими устройствами каждый раз, когда вы подключаете их друг к другу по Wi‑Fi (на Mac — «Раздать по Wi‑Fi», на iPhone — «Подтянуть с Mac»). Прослушивания с разных устройств складываются.'),
+        h('div', 'psub', 'Аккаунт, плейлисты, любимое и статистика объединяются с другим устройством, когда вы связываете их по Wi‑Fi (на Mac — «Связать с iPhone», на iPhone — «Связать с Mac»). Прослушивания с разных устройств складываются. Перенос музыки («Раздать по Wi‑Fi» и «Подтянуть по Wi‑Fi») работает отдельно и профиль не трогает.'),
         h('div', 'psub', t ? 'Последняя синхронизация: ' + new Date(t).toLocaleString('ru') + ' · других устройств: ' + n : 'Синхронизаций пока не было.'));
-      const b = h('div', 'mbtns'), rs = h('button', 'pill', 'Забыть связь'), ok = h('button', 'pill accent', 'Закрыть');
-      rs.onclick = () => { if (confirm('Забыть связь с другими устройствами? Плейлисты и статистика на этом устройстве останутся.')) { PS.reset(); close(); toast('Связь сброшена'); } }; ok.onclick = close; b.append(rs, ok); c.append(b);
+      const b = h('div', 'mbtns'), lk = h('button', 'pill', SYNC_ROLE === 'host' ? 'Связать с iPhone' : 'Связать с Mac'), rs = h('button', 'pill', 'Забыть связь'), ok = h('button', 'pill accent', 'Закрыть');
+      rs.onclick = () => { if (confirm('Забыть связь с другими устройствами? Плейлисты и статистика на этом устройстве останутся.')) { PS.reset(); close(); toast('Связь сброшена'); } }; lk.onclick = () => { close(); SYNC.open('link'); }; ok.onclick = close; b.append(lk, rs, ok); c.append(b);
     });
   }
 
